@@ -1,40 +1,55 @@
 <template>
-  <main class="px-8 py-6 bg-gray-100">
-    <div class="max-w-7xl mx-auto grid grid-cols-4 gap-4">
-      <div class="main-left col-span-2 flex flex-col">
-        <div class="p-20 bg-white border border-gray-200 rounded-lg flex-1">
-          <h1 class="mb-6 text-2xl">Log in</h1>
-          <p class="mb-6 text-gray-500">
-            <strong>Creating accounts is not supported on this application.</strong>
-            <br>
-            <br>
-            Contact a system administrator from your organization in order to be assigned your personal credentials.
-          </p>
-        </div>
-      </div>
-      <div class="main-center col-span-2 space-y-4 flex flex-col">
-        <div class="p-20 bg-white border border-gray-200 rounded-lg flex-1">
-          <form class="space-y-6">
-            <div>
-              <label>E-mail</label><br>
-              <input type="email" placeholder="Your e-mail address"
-                     class="w-full mt-2 py-4 px-6 border border-gray-200 rounded-lg">
-            </div>
+  <nav class="py-10 px-8 border-b border-gray-200">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between">
+                    <div class="menu-left">
+                        <a href="#" class="text-xl">Wey</a>
+                    </div>
 
-            <div>
-              <label>Password</label><br>
-              <input type="password" placeholder="Your password"
-                     class="w-full mt-2 py-4 px-6 border border-gray-200 rounded-lg">
+                    <div class="menu-right">
+                        <a href="#" class="py-4 px-6 bg-gray-600 text-white rounded-lg">Log in</a>
+                        <a href="#" class="py-4 px-6 bg-purple-600 text-white rounded-lg">Sign up</a>
+                    </div>
+                </div>
             </div>
+        </nav>
 
-            <div>
-              <button class="py-4 px-6 bg-purple-600 text-white rounded-lg">Log in</button>
+        <main class="px-8 py-6 bg-gray-100">
+            <div class="max-w-7xl mx-auto grid grid-cols-4 gap-4">
+                <div class="main-left col-span-2">
+                    <div class="p-12 bg-white border border-gray-200 rounded-lg">
+                        <h1 class="mb-6 text-2xl">Log in</h1>
+
+                        <p class="mb-6 text-gray-500">
+                          <strong>Creating accounts is not supported on this application.</strong>
+                          <br>
+                          <br>
+                          Contact a system administrator from your organization in order to be assigned your personal credentials.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="main-center col-span-2 space-y-4">
+                    <div class="p-12 bg-white border border-gray-200 rounded-lg">
+                        <form class="space-y-6">
+                            <div>
+                                <label>E-mail</label><br>
+                                <input type="email" placeholder="Your e-mail address" class="w-full mt-2 py-4 px-6 border border-gray-200 rounded-lg">
+                            </div>
+
+                            <div>
+                                <label>Password</label><br>
+                                <input type="password" placeholder="Your password" class="w-full mt-2 py-4 px-6 border border-gray-200 rounded-lg">
+                            </div>
+
+                            <div>
+                                <button class="py-4 px-6 bg-purple-600 text-white rounded-lg">Log in</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </main>
+        </main>
 </template>
 
 <script setup lang="ts">
