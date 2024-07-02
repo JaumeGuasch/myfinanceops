@@ -37,7 +37,6 @@
             </svg>
             <span>Operations</span>
           </a>
-
           <a href="#" class="flex flex-col items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor"
@@ -48,7 +47,6 @@
             <span>Notifications</span>
           </a>
         </div>
-
         <div class="menu-right">
           <a href="#">
             <img src="https://i.pravatar.cc/40?img=70" class="rounded-full" width="48">
