@@ -38,4 +38,11 @@
 </template>
 
 <script setup lang="ts">
+// Your setup code here. For example:
+import {ref} from 'vue';
+
+const email = ref('');
+const password = ref('');
+
+// Functions and reactive data defined here are automatically exposed to the template
 </script>
