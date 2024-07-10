@@ -62,8 +62,24 @@
     </div>
   </nav>
   <main class="px-8 py-6 bg-gray-100">
-    <RouterView/>
+    <router-view v-slot="{ Component }">
+      <transition name="slide-fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
   </main>
 </template>
 <script setup lang="ts">
 </script>
+
+<style>
+.slide-fade-enter-active, .slide-fade-leave-active
+/* Enter and leave animations */
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition: all 0.5s ease-in;
+}
+.slide-fade-enter, .slide-fade-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+</style>

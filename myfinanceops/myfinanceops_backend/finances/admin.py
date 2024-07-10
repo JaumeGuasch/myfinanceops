@@ -7,16 +7,16 @@ from finances.models import User
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('email', 'name', 'surnames', 'phone_number', 'organization')
+        fields = ('email', 'name', 'surnames', 'organization')
 
 
 class CustomUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     model = User
-    list_display = ['email', 'name', 'surnames', 'phone_number', 'organization']
+    list_display = ['email', 'name', 'surnames', 'organization']
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('name', 'surnames', 'phone_number', 'organization')}),
+        ('Personal info', {'fields': ('name', 'surnames', 'organization')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login',)}),
     )
