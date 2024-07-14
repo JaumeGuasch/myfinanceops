@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
-from finances.models import User
+from finances.models import User, OperationChain, Market, StockOperation, FuturesOperation, FuturesOptionsOperation
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -23,10 +23,32 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'name', 'surnames', 'phone_number', 'organization'),
+            'fields': ('email', 'password1', 'password2', 'name', 'surnames', 'organization'),
         }),
     )
     ordering = ('email',)  # Corrected to use 'email' instead of 'username'
+
+    class StockOperationAdmin(admin.ModelAdmin):
+        list_display = ('id', 'date', 'market', 'trader', 'description', 'operation_chain')
+
+    class FuturesOperationAdmin(admin.ModelAdmin):
+        list_display = ('id', 'date', 'market', 'trader', 'description', 'operation_chain')
+
+    class FuturesOptionsOperationAdmin(admin.ModelAdmin):
+        list_display = ('id', 'date', 'market', 'trader', 'description', 'operation_chain')
+
+    class MarketAdmin(admin.ModelAdmin):
+        list_display = ('name', 'currency')
+
+    class OperationChainAdmin(admin.ModelAdmin):
+        list_display = ('id', 'created_at')
+
+    # Register your models here
+    admin.site.register(StockOperation, StockOperationAdmin)
+    admin.site.register(FuturesOperation, FuturesOperationAdmin)
+    admin.site.register(FuturesOptionsOperation, FuturesOptionsOperationAdmin)
+    admin.site.register(Market, MarketAdmin)
+    admin.site.register(OperationChain, OperationChainAdmin)
 
 
 admin.site.register(User, CustomUserAdmin)

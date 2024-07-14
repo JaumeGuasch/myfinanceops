@@ -28,6 +28,8 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+FRONTEND_URL = 'http://localhost:5173'
+
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
@@ -44,7 +46,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    FRONTEND_URL,
 ]
 
 INSTALLED_APPS = [
