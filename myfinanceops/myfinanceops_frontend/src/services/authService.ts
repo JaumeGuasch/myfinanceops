@@ -17,15 +17,17 @@ const login = (email: string, password: string) => {
         email,
         password
     }).then(response => {
-        if (response.data.access) {
-            localStorage.setItem('user', JSON.stringify(response.data));
-        }
+        console.log("login response: ", response.data);
         return response.data;
+    }).catch(error => {
+        console.error("Login error:", error);
+        throw error;
     });
 };
 
 const logout = () => {
-    localStorage.removeItem('user');
+    // Assuming your server provides an endpoint to clear the HTTP-only cookie
+    return axios.post(`${API_URL}logout/`);
 };
 
 export default {

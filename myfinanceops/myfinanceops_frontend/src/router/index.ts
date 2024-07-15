@@ -4,14 +4,16 @@ import LoginView from "../views/LoginView.vue";
 import OperationsView from "@/views/OperationsView.vue";
 import HedgingView from "@/views/HedgingView.vue";
 import SignupVIew from '@/views/SignupVIew.vue';
+import {useAuthStore} from "@/stores/auth";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
-            path: '/',
+            path: '/home/',
             name: 'home',
-            component: HomeView
+            component: HomeView,
+            meta: {requiresAuth: true}
         },
         {
             path: '/login',
@@ -26,22 +28,32 @@ const router = createRouter({
         {
             path: '/operations',
             name: 'operations',
-            component: OperationsView
+            component: OperationsView,
+            meta: {requiresAuth: true}
+
         },
         {
             path: '/hedging',
             name: 'hedging',
-            component: HedgingView
+            component: HedgingView,
+            meta: {requiresAuth: true}
+
         },
         {
             path: '/about',
             name: 'about',
-            // route level code-splitting
-            // this generates a separate chunk (About.[hash].js) for this route
-            // which is lazy-loaded when the route is visited.
             component: () => import('../views/AboutView.vue')
         }
     ]
 })
+
+router.beforeEach((to, from, next) => {
+    const authStore = useAuthStore();
+    if (to.matched.some(record => record.meta.requiresAuth) && !authStore.isAuthenticated) {
+        next('/login'); // Redirect to login page
+    } else {
+        next(); // Proceed as normal
+    }
+});
 
 export default router

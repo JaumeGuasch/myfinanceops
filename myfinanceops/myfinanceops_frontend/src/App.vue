@@ -8,7 +8,7 @@
           </a>
         </div>
         <div class="menu-center absolute left-1/2 transform -translate-x-1/2 flex space-x-20">
-          <a href="#" class="flex flex-col items-center">
+          <a href="/home/" class="flex flex-col items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-8">
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -17,7 +17,7 @@
             <span>Home</span>
           </a>
 
-          <a href="#" class="flex flex-col items-center">
+          <a href="/hedging/" class="flex flex-col items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor"
                  class="w-8 h-8">
@@ -27,7 +27,7 @@
             <span>Hedging</span>
           </a>
 
-          <a href="#" class="flex flex-col items-center">
+          <a href="/operations/" class="flex flex-col items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-8">
               <path stroke-linecap="round" stroke-linejoin="round"

@@ -10,16 +10,18 @@ export const useOperationsStore = defineStore('operations', {
     }),
     actions: {
         async fetchOperations() {
-            this.loading = true
+            this.loading = true;
             try {
-                const response = await axios.get(import.meta.env.VITE_API_URL + 'operations/')
-                this.operations = response.data
-                this.error = null
+                const response = await axios.get(import.meta.env.VITE_API_URL + 'operations/', {
+                    withCredentials: true // Include credentials with the request
+                });
+                this.operations = response.data;
+                this.error = null;
             } catch (error) {
                 console.error("Operations listing failed.", error);
                 throw error;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         }
     }

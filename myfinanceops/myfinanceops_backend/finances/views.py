@@ -1,19 +1,31 @@
-from django.views.generic import ListView
+import logging
+from datetime import datetime, timedelta
+from django.conf import settings
+from django.utils.decorators import method_decorator
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import AuthenticationFailed
-from finances.models import User, Operation
+from finances.decorators import jwt_required
+from finances.models import User
 from finances.serializers import UserSerializer, StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer
-import jwt, datetime
+import jwt
 from django.http import JsonResponse
 from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation
+from django.views import View
+import logging
 import json
 
 
 # Create your views here.
+
+class JWTAuthenticationMixin(View):
+    @method_decorator(jwt_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
 
 class SignupView(APIView):
     def post(self, request):
@@ -27,8 +39,11 @@ class SignupView(APIView):
 class LoginView(APIView):
 
     def post(self, request):
+        logger = logging.getLogger(__name__)
         email = request.data['email']
         password = request.data['password']
+
+        logger.debug(f"Login attempt for username: {email}")
 
         user = User.objects.filter(email=email).first()
 
@@ -40,41 +55,23 @@ class LoginView(APIView):
 
         payload = {
             'id': str(user.id),
-            'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=180),
-            'iat': datetime.datetime.now(datetime.UTC)
+            'exp': datetime.now() + timedelta(minutes=180),
+            'iat': datetime.now(),
         }
 
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         response = Response()
-        response.set_cookie(key='jwt', value=token, httponly=True)
+        response.set_cookie(key='jwt', value=token, httponly=True, secure=False, samesite='Lax')
         response.data = {
-            'jwt': token
+            'message': 'Login successful',
+            'jwt': token,
+            'email': email
         }
-
         return response
 
 
-class UserView(APIView):
-    def get(self, request):
-        token = request.COOKIES.get('jwt')
-
-        if not token:
-            raise AuthenticationFailed('Unauthenticated')
-
-        print(f"Token: {token}")
-
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-            print(f"Payload: {payload}")
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Unauthenticated')
-        user = User.objects.filter(id=payload['id']).first()
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-
-
 class LogoutView(APIView):
-    permission_classes = [AllowAny]  # Allow access without authentication
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         response = Response()
@@ -85,7 +82,9 @@ class LogoutView(APIView):
         return response
 
 
-class CreateOperationView(APIView):
+class CreateOperationView(JWTAuthenticationMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         data = json.loads(request.body)
         operation_type = data.get('type')
@@ -104,8 +103,10 @@ class CreateOperationView(APIView):
         return JsonResponse({'message': 'Operation created successfully'}, status=201)
 
 
-class OperationsView(APIView):
-    def get(self, request):
+class OperationsView(JWTAuthenticationMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
         # Initialize an empty list to hold all operations
         all_operations = []
 

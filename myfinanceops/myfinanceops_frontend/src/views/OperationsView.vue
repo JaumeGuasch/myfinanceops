@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import {onMounted, ref, watch, computed} from 'vue';
+import {useOperationsStore} from "@/stores/operationsStore";
 
 interface Operation {
   id: number;
@@ -128,28 +129,10 @@ const columnVisibility = ref({
   description: {visible: true, searchTerm: ''},
 });
 
-onMounted(async () => {
-  loading.value = true;
-  const operationsEndpoint = `${import.meta.env.VITE_API_URL || process.env.VUE_APP_API_URL}operations/`;
-  try {
-    const response = await fetch(operationsEndpoint);
-    if (!response.ok) {
-      console.error('Response Status:', response.status);
-      const errorBody = await response.text();
-      console.error('Error Response Body:', errorBody);
-      throw new Error(`Failed to fetch: ${response.status} ${errorBody}`);
-    }
-    operations.value = await response.json();
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error('Unexpected Error:', err);
-    } else {
-      const error = ref<string | null>(null);
-      error.value = "An unexpected error occurred";
-    }
-  } finally {
-    loading.value = false;
-  }
+const operationsStore = useOperationsStore();
+
+onMounted(() => {
+  operationsStore.fetchOperations();
 });
 
 function togglePopup() {

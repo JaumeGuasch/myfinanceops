@@ -46,7 +46,6 @@ import {ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useAuthStore} from '@/stores/auth';
 
-
 const email = ref('');
 const password = ref('');
 const errorMessage = ref('');
@@ -57,7 +56,8 @@ const handleLogin = async (event: Event) => {
   event.preventDefault(); // Prevent default form submission
   try {
     await authStore.login(email.value, password.value);
-    await router.push('/'); // Redirect to the home page
+    // If no error is thrown, assume login is successful
+    await router.push('/home/'); // Redirect to the home page on successful login
   } catch (error) {
     console.error(error); // Log the error for debugging
     errorMessage.value = "Login failed. Please check your credentials and try again.";
