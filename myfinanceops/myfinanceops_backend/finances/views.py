@@ -1,88 +1,85 @@
-import logging
-from datetime import datetime, timedelta
-from django.conf import settings
-from django.utils.decorators import method_decorator
-from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+import json
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import AuthenticationFailed
-from finances.decorators import jwt_required
-from finances.models import User
-from finances.serializers import UserSerializer, StockOperationSerializer, \
-    FuturesOperationSerializer, FuturesOptionsOperationSerializer
-import jwt
-from django.http import JsonResponse
+from .serializers import UserSerializer
+from rest_framework import status
+from rest_framework.authtoken.models import Token
 from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation
-from django.views import View
-import logging
-import json
+from finances.serializers import StockOperationSerializer, \
+    FuturesOperationSerializer, FuturesOptionsOperationSerializer
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 
 # Create your views here.
 
-class JWTAuthenticationMixin(View):
-    @method_decorator(jwt_required)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+@api_view(['POST'])
+def login(request):
+    try:
+        print(request.data)
+        email = request.data.get('email')
+        password = request.data.get('password')
+        if not email or not password:
+            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(get_user_model(), email=email)
+        print(user.email)
+        if user.check_password(password):
+            token, created = Token.objects.get_or_create(user=user)
+            serializer = UserSerializer(user)
+            return Response({"token": token.key, "user": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class SignupView(APIView):
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+@api_view(['POST'])
+def signup(request):
+    user = get_user_model()  # Get the custom user model
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
         serializer.save()
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class LoginView(APIView):
-
-    def post(self, request):
-        logger = logging.getLogger(__name__)
-        email = request.data['email']
-        password = request.data['password']
-
-        logger.debug(f"Login attempt for username: {email}")
-
-        user = User.objects.filter(email=email).first()
-
-        if user is None:
-            raise AuthenticationFailed('User not found')
-
-        if not user.check_password(password):
-            raise AuthenticationFailed('Incorrect password')
-
-        payload = {
-            'id': str(user.id),
-            'exp': datetime.now() + timedelta(minutes=180),
-            'iat': datetime.now(),
-        }
-
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        response = Response()
-        response.set_cookie(key='jwt', value=token, httponly=True, secure=False, samesite='Lax')
-        response.data = {
-            'message': 'Login successful',
-            'jwt': token,
-            'email': email
-        }
-        return response
+        user = user.objects.get(email=request.data['email'])
+        user.set_password(request.data['password'])
+        user.save()
+        token = Token.objects.create(user=user)
+        return Response({"token": token.key, "user": serializer.data}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LogoutView(APIView):
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def test_token(request):
+    print(request.data)
+    return Response({"message": "Token is valid for {}".format(request.user.email)})
+
+
+@api_view(['POST'])
+def logout(request):
+    try:
+        # Retrieve the user's token and delete it
+        request.user.auth_token.delete()
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        # If something goes wrong, return an error response
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HomeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {
-            'message': 'success'
-        }
-        return response
+    def get(self, request):
+        return JsonResponse({'message': 'Welcome to the finance operations API!'})
 
 
-class CreateOperationView(JWTAuthenticationMixin, APIView):
+class CreateOperationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -103,14 +100,13 @@ class CreateOperationView(JWTAuthenticationMixin, APIView):
         return JsonResponse({'message': 'Operation created successfully'}, status=201)
 
 
-class OperationsView(JWTAuthenticationMixin, APIView):
+class OperationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # Initialize an empty list to hold all operations
         all_operations = []
+        print(request.user)
 
-        # A mapping of subclasses to their serializers
         subclass_serializer_mapping = {
             StockOperation: StockOperationSerializer,
             FuturesOperation: FuturesOperationSerializer,
@@ -127,4 +123,5 @@ class OperationsView(JWTAuthenticationMixin, APIView):
             all_operations.extend(serializer.data)
 
         # Return the combined data
+        print(all_operations)
         return Response(all_operations)

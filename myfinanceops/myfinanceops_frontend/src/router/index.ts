@@ -43,17 +43,23 @@ const router = createRouter({
             path: '/about',
             name: 'about',
             component: () => import('../views/AboutView.vue')
+        },
+        {
+            path: '/logout',
+            name: 'logout',
+            component: () => import('../views/LogoutView.vue'),
         }
     ]
 })
 
 router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
+    authStore.checkAuthStatus(); // Ensure the check is performed before each navigation
     if (to.matched.some(record => record.meta.requiresAuth) && !authStore.isAuthenticated) {
-        next('/login'); // Redirect to login page
+        next({path: '/login'});
     } else {
-        next(); // Proceed as normal
+        next();
     }
 });
 
-export default router
+export default router;

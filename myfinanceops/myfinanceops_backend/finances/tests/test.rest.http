@@ -1,0 +1,10 @@
+### GET request to example server
+GET http://127.0.0.1:8000/api/test-token
+Content-Type: application/json
+Authorization: Token 8aea6d648eb3397816de1f619b28b99aadef74bf
+###
+
+GET http://127.0.0.1:8000/api/operations
+Content-Type: application/json
+Authorization: Token 8aea6d648eb3397816de1f619b28b99aadef74bf
+###

@@ -2,6 +2,11 @@
   <main :style="{ 'margin-right': showPopup ? '30%' : '0' }">
     <div class="operations-diary-header">
       <h1 class="header-style">operations diary</h1>
+      <div class="table-switch-buttons">
+        <button @click="setTableView('Stocks')" class="table-switch-button">Stocks</button>
+        <button @click="setTableView('Futures')" class="table-switch-button">Futures</button>
+        <button @click="setTableView('Options')" class="table-switch-button">Options</button>
+      </div>
       <div class="flex items-center">
         <div :class="{ 'showPopup': showPopup }">
           <button @click="togglePopup" class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2">
@@ -65,6 +70,10 @@
             Trader
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              v-if="columnVisibility.shares.visible">
+            Shares
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               v-if="columnVisibility.description.visible">
             Description
           </th>
@@ -98,6 +107,7 @@
         </tr>
         </tbody>
       </table>
+
     </div>
   </main>
 </template>
@@ -114,6 +124,7 @@ interface Operation {
   market_name: string;
   trader: string;
   description: string;
+  shares: number;
 }
 
 const operations = ref<Operation[]>([]);
@@ -126,13 +137,19 @@ const columnVisibility = ref({
   date: {visible: true, searchTerm: ''},
   market: {visible: true, searchTerm: ''},
   trader: {visible: true, searchTerm: ''},
+  shares: {visible: true, searchTerm: ''},
   description: {visible: true, searchTerm: ''},
 });
+
+const currentTableView = ref('Stocks'); // Default to Stocks
+function setTableView(view: string) {
+  currentTableView.value = view;
+}
 
 const operationsStore = useOperationsStore();
 
 onMounted(() => {
-  operationsStore.fetchOperations();
+  operationsStore.getOperations();
 });
 
 function togglePopup() {
@@ -325,12 +342,17 @@ button:hover {
 }
 
 .operations-diary-header {
-  margin-top: 2%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* This ensures the title and button group are on opposite ends */
   padding: 8px 32px;
   border: 1px solid #ddd;
   border-radius: 8px;
+  margin-top: 2%;
+}
+
+.table-switch-buttons {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  gap: 20px; /* Adjust the gap size as needed */
 }
 </style>

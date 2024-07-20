@@ -2,27 +2,36 @@ import './assets/main.css'
 import {createApp} from 'vue'
 import {createPinia} from 'pinia'
 import App from './App.vue'
-import router from './router'
 import axios from 'axios'
+import router from './router';
+import {useAuthStore} from "@/stores/auth";
 
-// Add CSRF token to axios if needed
 
-axios.defaults.baseURL = 'http://127.0.0.1:8000/' // Django URL
-axios.defaults.withCredentials = true;
-
-axios.interceptors.request.use((config) => {
-    // Search for the jwt cookie
-    const jwtToken = document.cookie.split(';').find(c => c.trim().startsWith('jwt='));
-    if (jwtToken) {
-        // Extract the token value and set it in the Authorization header
-        config.headers.Authorization = `Bearer ${jwtToken.split('=')[1]}`;
-    }
-    return config;
+export const api = axios.create({
+    baseURL: 'http://localhost:8000/',
+    withCredentials: true,
 });
 
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers['Authorization'] = `Token ${token}`;
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
+export default api;
+
 const app = createApp(App)
+app.config.globalProperties.$api = api;
+const pinia = createPinia()
+app.use(pinia)
 
-app.use(createPinia())
-app.use(router)
+const authStore = useAuthStore();
+authStore.checkAuthStatus();
 
+
+app.use(router);
 app.mount('#app')
+

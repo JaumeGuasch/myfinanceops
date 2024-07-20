@@ -32,9 +32,13 @@
             </div>
             <div>
               <button class="py-4 px-6 bg-purple-600 text-white rounded-lg">Log in</button>
+              <p v-if="errorMessage" class="text-red-500">{{ errorMessage }}</p>
             </div>
           </form>
-          <p v-if="errorMessage" class="text-red-500">{{ errorMessage }}</p>
+          <div v-if="authStore.error" class="text-red-500">
+            <span class="material-icons" style="font-size: 1rem;">Error: </span>
+            {{ authStore.error }}
+          </div>
         </div>
       </div>
     </div>
@@ -42,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useAuthStore} from '@/stores/auth';
 
@@ -53,14 +57,26 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const handleLogin = async (event: Event) => {
+  errorMessage.value = '';
+  if (!email.value.trim() || !password.value.trim()) {
+    errorMessage.value = "Please fill up both email and password.";
+    return; // Stop the function here
+  }
   event.preventDefault(); // Prevent default form submission
   try {
+    // Pass email and password as a single object
     await authStore.login(email.value, password.value);
-    // If no error is thrown, assume login is successful
-    await router.push('/home/'); // Redirect to the home page on successful login
+// Assuming `isLoggedIn` is a property that gets updated to true upon successful login
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error(error);
+  }
+  try {
+    await router.push('/home/'); // Redirect to the home page on successful login{
+
+  } catch (error) {
+    console.error(error);
     errorMessage.value = "Login failed. Please check your credentials and try again.";
   }
-};
+}
+
 </script>

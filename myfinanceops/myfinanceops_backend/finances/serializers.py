@@ -1,23 +1,14 @@
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation
 from rest_framework import serializers
-from finances.models import User, StockOperation, FuturesOperation, FuturesOptionsOperation
+
+from rest_framework import serializers
+from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta(object):
         model = User
-        fields = ['id', 'email', 'password', 'name', 'surnames', 'organization']
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
-
-    def create(self, validated_data):
-        password = validated_data.pop('password', None)
-        instance = self.Meta.model(**validated_data)
-
-        if password is not None:
-            instance.set_password(password)
-        instance.save()
-        return instance
+        fields = ['id', 'email', 'name', 'surnames', 'organization', 'is_active', 'is_staff']
 
 
 class StockOperationSerializer(serializers.ModelSerializer):

@@ -1,5 +1,6 @@
+from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import uuid
 from django.conf import settings
 
@@ -82,6 +83,7 @@ class Operation(models.Model):
 
 
 class StockOperation(Operation):
+    shares_amount = models.PositiveIntegerField()
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_stock_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -91,6 +93,7 @@ class StockOperation(Operation):
 
 
 class FuturesOperation(Operation):
+    contract = models.CharField(max_length=255)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_futures_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -100,6 +103,7 @@ class FuturesOperation(Operation):
 
 
 class FuturesOptionsOperation(Operation):
+    strike_price = models.DecimalField(max_digits=10, decimal_places=2)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_futures_options_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
