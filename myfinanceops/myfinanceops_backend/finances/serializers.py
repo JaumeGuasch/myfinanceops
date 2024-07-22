@@ -1,4 +1,4 @@
-from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, Market
 from rest_framework import serializers
 
 from rest_framework import serializers
@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class StockOperationSerializer(serializers.ModelSerializer):
-    market_name = serializers.CharField(source='market.name', read_only=True)
+    market_name = serializers.StringRelatedField(source='market.name', read_only=True)
 
     class Meta:
         model = StockOperation
@@ -20,7 +20,7 @@ class StockOperationSerializer(serializers.ModelSerializer):
 
 
 class FuturesOperationSerializer(serializers.ModelSerializer):
-    market_name = serializers.CharField(source='market.name', read_only=True)
+    market_name = serializers.StringRelatedField(source='market.name', read_only=True)
 
     class Meta:
         model = FuturesOperation
@@ -28,10 +28,18 @@ class FuturesOperationSerializer(serializers.ModelSerializer):
 
 
 class FuturesOptionsOperationSerializer(serializers.ModelSerializer):
-    market_name = serializers.CharField(source='market.name', read_only=True)
+    market_name = serializers.StringRelatedField(source='market.name', read_only=True)
 
     class Meta:
         model = FuturesOptionsOperation
+        fields = '__all__'
+
+
+class MarketSerializer(serializers.ModelSerializer):
+    market_name = serializers.CharField(source='market.name', read_only=True)
+
+    class Meta:
+        model = Market
         fields = '__all__'
 
 

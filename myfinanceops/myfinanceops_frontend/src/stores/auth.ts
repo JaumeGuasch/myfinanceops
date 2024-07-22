@@ -46,8 +46,8 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await authService.login(email, password);
                 const {token, user} = response;
-
                 localStorage.setItem('token', token);
+                localStorage.setItem('user', user.name)
                 this.user = {...user, token};
                 this.token = token;
                 this.isAuthenticated = true;
@@ -79,6 +79,12 @@ export const useAuthStore = defineStore('auth', {
             this.loggedOut = true;
         },
     },
+    getters: {
+        userName: (state) => {
+            // Return the user's name from localStorage if available
+            return localStorage.getItem('user') || '';
+        }
+    }
 
 });
 

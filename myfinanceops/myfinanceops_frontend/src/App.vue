@@ -1,5 +1,5 @@
 <template>
-  <nav class="py-10 px-8 border-b border-gray-200">
+  <nav class="nav py-6 px-8 border-b border-gray-200">
     <div class="max-w-7xl mx-auto">
       <div class="flex items-center justify-between">
         <div class="menu-left">
@@ -54,32 +54,60 @@
           </a>
         </div>
         <div class="menu-right">
-          <a href="#">
-            <img src="https://i.pravatar.cc/40?img=70" class="rounded-full" width="48">
+          <a href="#" v-if="isUserLoggedIn" style="font-style: normal; color: #000000; font-size: large">
+            Hi, {{ userName }}
           </a>
         </div>
       </div>
     </div>
   </nav>
-  <main class="px-8 py-6 bg-gray-100">
+  <main class="px-8 py-6 bg-white ">
     <router-view v-slot="{ Component }">
       <transition name="slide-fade" mode="out-in">
-        <component :is="Component" />
+        <component :is="Component" :key="$route.fullPath"/>
       </transition>
     </router-view>
   </main>
 </template>
+
 <script setup lang="ts">
+import {computed, watch} from 'vue';
+import {useAuthStore} from '@/stores/auth';
+
+const authStore = useAuthStore();
+
+
+let userName = computed(() => authStore.userName);
+const isUserLoggedIn = computed(() => authStore.isAuthenticated);
+
+watch(() => authStore.isAuthenticated, (newVal) => {
+  if (newVal) {
+    userName = computed(() => authStore.user.name);
+    const userNameString = userName.value;
+    userName = computed(() => capitalizeFirstLetter(userNameString));
+  } else {
+    userName = computed(() => '');
+  }
+});
+
+function capitalizeFirstLetter(string: string | null): string {
+  if (string === null) {
+    return '';
+  }
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+}
+
 </script>
 
 <style>
-.slide-fade-enter-active, .slide-fade-leave-active
-/* Enter and leave animations */
-.slide-fade-enter-active, .slide-fade-leave-active {
-  transition: all 0.5s ease-in;
+
+.nav {
+  background-color: #f9fafb;
+  border-bottom: 4px solid #dddddd;
 }
-.slide-fade-enter, .slide-fade-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
+
+body {
+  background-color: #ffffff;
 }
+
 </style>

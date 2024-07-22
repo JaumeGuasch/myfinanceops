@@ -3,9 +3,18 @@
     <div class="operations-diary-header">
       <h1 class="header-style">operations diary</h1>
       <div class="table-switch-buttons">
-        <button @click="setTableView('Stocks')" class="table-switch-button">Stocks</button>
-        <button @click="setTableView('Futures')" class="table-switch-button">Futures</button>
-        <button @click="setTableView('Options')" class="table-switch-button">Options</button>
+        <button @click="setTableView('Stock')"
+                :class="{'active-button': isActiveButton('Stock'), 'inactive-button': !isActiveButton('Stock')}"
+                class="table-switch-button">Stocks
+        </button>
+        <button @click="setTableView('Futures')"
+                :class="{'active-button': isActiveButton('Futures'), 'inactive-button': !isActiveButton('Futures')}"
+                class="table-switch-button">Futures
+        </button>
+        <button @click="setTableView('Options')"
+                :class="{'active-button': isActiveButton('Options'), 'inactive-button': !isActiveButton('Options')}"
+                class="table-switch-button">Options
+        </button>
       </div>
       <div class="flex items-center">
         <div :class="{ 'showPopup': showPopup }">
@@ -19,11 +28,13 @@
           </button>
           <div class="popup-container" v-if="showPopup">
             <div class="popup-panel">
-              <div v-for="(options, columnName) in columnVisibility" :key="columnName"
+              <div v-for="(columnDetail, columnName) in headers" :key="columnName"
                    class="checkbox-container items-center">
-                <input type="checkbox" v-model="options.visible" :id="columnName">
-                <label :for="columnName" class="search-label">{{ columnName }}
-                  <input type="text" v-model="options.searchTerm" class="ml-2 search-input" placeholder="Search...">
+                <input type="checkbox" v-model="columnDetail.visible" @click="toggleVisibility(columnName)"
+                       :id="columnName">
+                <label :for="columnName" class="search-label">{{ columnDetail.name }}
+                  <input type="text" v-model="columnDetail.searchTerm" class="ml-2 search-input"
+                         placeholder="Search...">
                 </label>
               </div>
               <div class="flex justify-end">
@@ -43,78 +54,37 @@
       </div>
     </div>
     <!-- Separate div for the operations table -->
-    <div class="table-wrapper">
-      <div v-if="loading" class="text-center py-4">Loading...</div>
-      <div v-if="error" class="text-red-500">Failed to load operations: {{ error }}</div>
+    <div v-if="loading" class="text-center py-4">Loading...</div>
+    <div v-if="error" class="text-red-500">Failed to load operations: {{ error }}</div>
+    <transition name="fade" mode="out-in">
       <table v-if="!loading && operations" class="table-auto divide-y divide-gray-200 mt-4 w-full">
         <thead class="bg-gray-50">
         <tr>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.id.visible">
-            ID
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.type.visible">
-            Type
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.date.visible">
-            Date
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.market.visible">
-            Market
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.trader.visible">
-            Trader
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.shares.visible">
-            Shares
-          </th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              v-if="columnVisibility.description.visible">
-            Description
-          </th>
+          <template v-for="(columnDetail, columnName) in headers" :key="columnName">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                v-if="columnDetail.visible">
+              {{ columnDetail.name }}
+            </th>
+          </template>
         </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
         <tr v-for="operation in filteredOperations" :key="operation.id">
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.id.visible">{{
-              operation.id
-            }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.type.visible">{{
-              operation.type
-            }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.date.visible">{{
-              operation.date
-            }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.market.visible">{{
-              operation.market_name
-            }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.trader.visible">{{
-              operation.trader
-            }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnVisibility.description.visible">
-            {{ operation.description }}
-          </td>
+          <template v-for="(columnDetail, columnName) in headers" :key="columnName">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnDetail.visible">
+              {{ operation[columnName as keyof Operation] }}
+            </td>
+          </template>
         </tr>
         </tbody>
       </table>
-
-    </div>
+    </transition>
   </main>
 </template>
 
 
 <script setup lang="ts">
-import {onMounted, ref, watch, computed} from 'vue';
+import {onMounted, ref, watch, computed, toRaw, reactive} from 'vue';
 import {useOperationsStore} from "@/stores/operationsStore";
 
 interface Operation {
@@ -125,30 +95,97 @@ interface Operation {
   trader: string;
   description: string;
   shares: number;
+  contract: string;
+  price: number;
+  strike_price: number;
+  call_put: string;
 }
 
-const operations = ref<Operation[]>([]);
+// Load and parse operations from localStorage
+const loadOperations = () => {
+  const operationsJSON = localStorage.getItem('operations');
+  return operationsJSON ? JSON.parse(operationsJSON) : [];
+};
 const loading = ref(false);
 const error = ref(null);
 const showPopup = ref(false);
-const columnVisibility = ref({
-  id: {visible: true, searchTerm: ''},
-  type: {visible: true, searchTerm: ''},
-  date: {visible: true, searchTerm: ''},
-  market: {visible: true, searchTerm: ''},
-  trader: {visible: true, searchTerm: ''},
-  shares: {visible: true, searchTerm: ''},
-  description: {visible: true, searchTerm: ''},
+const operationsStore = useOperationsStore();
+const currentTableView = ref<TableView>('Stock'); // Default to 'Stocks'
+const isActiveButton = computed(() => (view: string) => view === currentTableView.value);
+
+
+type TableView = 'Stock' | 'Futures' | 'Options';
+
+interface ColumnDetail {
+  name: string;
+  visible: boolean;
+  searchTerm: string;
+}
+
+function loadHeadersFromLocalStorage() {
+  const views: TableView[] = ['Stock', 'Futures', 'Options'];
+  views.forEach((view) => {
+    const savedHeadersJSON = localStorage.getItem(`${view}Headers`);
+    if (savedHeadersJSON) {
+      const savedHeaders = JSON.parse(savedHeadersJSON);
+      // Ensure the structure for each view exists in tableHeaders
+      if (!tableHeaders[view]) {
+        tableHeaders[view] = {};
+      }
+      // Update tableHeaders for the view with the loaded configuration
+      Object.keys(savedHeaders).forEach((key) => {
+        if (savedHeaders[key] !== undefined) {
+          // Initialize or update the column detail for each key in the view
+          tableHeaders[view][key] = savedHeaders[key];
+        }
+      });
+    }
+  });
+}
+
+const headers = computed(() => {
+  return tableHeaders[currentTableView.value];
 });
 
-const currentTableView = ref('Stocks'); // Default to Stocks
-function setTableView(view: string) {
+
+const tableHeaders = reactive<Record<TableView, Record<string, ColumnDetail>>>({
+  Stock: {
+    id: {name: 'ID', visible: true, searchTerm: ''},
+    type: {name: 'Type', visible: true, searchTerm: ''},
+    date: {name: 'Date', visible: true, searchTerm: ''},
+    market_name: {name: 'Market', visible: true, searchTerm: ''},
+    trader: {name: 'Trader', visible: true, searchTerm: ''},
+    shares: {name: 'Shares', visible: true, searchTerm: ''},
+    description: {name: 'Description', visible: true, searchTerm: ''},
+  },
+  Futures: {
+    id: {name: 'ID', visible: true, searchTerm: ''},
+    type: {name: 'Type', visible: true, searchTerm: ''},
+    date: {name: 'Date', visible: true, searchTerm: ''},
+    market_name: {name: 'Market', visible: true, searchTerm: ''},
+    contract: {name: 'Contract', visible: true, searchTerm: ''},
+    price: {name: 'Price', visible: true, searchTerm: ''},
+    description: {name: 'Description', visible: true, searchTerm: ''},
+  },
+  Options: {
+    id: {name: 'ID', visible: true, searchTerm: ''},
+    type: {name: 'Type', visible: true, searchTerm: ''},
+    date: {name: 'Date', visible: true, searchTerm: ''},
+    market_name: {name: 'Market', visible: true, searchTerm: ''},
+    contract: {name: 'Contract', visible: true, searchTerm: ''},
+    strike_price: {name: 'Strike Price', visible: true, searchTerm: ''},
+    call_put: {name: 'Call/Put', visible: true, searchTerm: ''},
+  },
+});
+
+console.log('tableHeaders:', tableHeaders[currentTableView.value]);
+
+function setTableView(view: TableView) {
   currentTableView.value = view;
 }
 
-const operationsStore = useOperationsStore();
-
 onMounted(() => {
+  loadHeadersFromLocalStorage();
   operationsStore.getOperations();
 });
 
@@ -156,60 +193,82 @@ function togglePopup() {
   showPopup.value = !showPopup.value;
 }
 
-// Watch for changes in column visibility and save to localStorage
-watch(columnVisibility, (newValue) => {
-  localStorage.setItem('columnVisibility', JSON.stringify(newValue));
-}, {deep: true});
-
 watch(showPopup, (newValue) => {
   console.log('showPopup changed to:', newValue);
 }, {immediate: true});
 
-const filteredOperations = computed(() => {
-  return operations.value.filter(operation => {
-    return Object.entries(columnVisibility.value).every(([key, {visible, searchTerm}]) => {
-      if (!visible) return true;
-      if (!searchTerm) return true;
-      const value = operation[key as keyof Operation]?.toString().toLowerCase() ?? '';
-      return value.includes(searchTerm.toLowerCase());
-    });
-  });
-});
-</script>
 
+function toggleVisibility(columnName: string) {
+  const savedHeaders = headers.value; // Current headers from the reactive state
+  savedHeaders[columnName].visible = !savedHeaders[columnName].visible;
+
+  // Save the updated headers for the current view only
+  localStorage.setItem(`${currentTableView.value}Headers`, JSON.stringify(savedHeaders));
+}
+
+const operations = ref<Operation[]>(loadOperations());
+
+
+// Step 1: Watch for changes in search terms
+watch(() => tableHeaders, (newVal, oldVal) => {
+  // Call a method to filter operations based on the new search terms
+  filterOperationsBasedOnSearch();
+}, {deep: true});
+
+// Step 2: Implement the method to filter operations
+function filterOperationsBasedOnSearch() {
+  const currentHeaders = tableHeaders[currentTableView.value];
+  operations.value = loadOperations().filter((operation: Operation) => {
+    let matchesSearchTerms = true;
+    for (const [columnName, columnDetail] of Object.entries(currentHeaders)) {
+      if (columnDetail.visible && columnDetail.searchTerm) {
+        const operationValue = operation[columnName as keyof Operation]?.toString().toLowerCase() || '';
+        if (!operationValue.includes(columnDetail.searchTerm.toLowerCase())) {
+          matchesSearchTerms = false;
+          break;
+        }
+      }
+    }
+    return matchesSearchTerms;
+  });
+}
+
+// Computed property to filter operations based on the current table view
+const filteredOperations = computed(() => {
+  return operations.value.filter(operation => operation.type.toLowerCase() === currentTableView.value.toLowerCase());
+});
+
+</script>
 
 <style scoped>
 
-.operations-diary-header, .table-wrapper {
+.operations-diary-header {
   transition: margin-right 0.3s ease;
   margin-right: var(-30%, 0%);
-
+  background-color: #ffffff; /* Replace #f0f0f0 with your desired color */
 }
 
 .header-style {
   text-transform: uppercase;
   font-weight: bolder;
   font-size: 24px;
-  background-color: #f3f4f6;
   color: #1f2937;
   text-align: center;
   padding: 8px;
-}
+  background-color: #ffffff; /* Replace #f0f0f0 with your desired color */
 
-.table-auto {
-  border-collapse: collapse;
-  width: 100%;
 }
 
 th, td {
   border: 2px solid #ddd;
   text-align: left;
   padding: 8px;
+  color: #4b5563;
 }
 
 th {
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background-color: #4f46e5;
+  color: #ffffff;
   text-align: center;
 }
 
@@ -223,11 +282,32 @@ th:first-child, td:first-child {
 }
 
 .table-auto {
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-collapse: collapse;
   border-spacing: 0;
   width: 100%;
-  margin: 0;
+  margin-top: 1%;
+  border-radius: 8px; /* Adjust this value to increase or decrease the roundness */
+  overflow: hidden; /* Ensures the inner elements do not overflow the rounded corners */
+  background-color: #ffffff; /* Replace #f0f0f0 with your desired color */
+
+
+}
+
+th:first-child {
+  border-top-left-radius: 12px; /* Match the table's border-radius */
+}
+
+th:last-child {
+  border-top-right-radius: 12px; /* Match the table's border-radius */
+}
+
+tr:last-child td:first-child {
+  border-bottom-left-radius: 12px; /* Match the table's border-radius */
+}
+
+tr:last-child td:last-child {
+  border-bottom-right-radius: 12px; /* Match the table's border-radius */
 }
 
 .table-auto th {
@@ -235,17 +315,15 @@ th:first-child, td:first-child {
 }
 
 .table-auto td {
-  font-size: 14px;
+  font-size: 16px;
 }
 
-.table-wrapper {
-  border: 4px solid lightslategrey;
-  border-radius: 4px;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-  margin-left: 0;
-  margin-top: 2%;
+tbody tr:nth-child(odd) {
+  background-color: #ffffff; /* White for odd rows */
+}
+
+tbody tr:nth-child(even) {
+  background-color: #ABBEFF; /* Light blue for even rows */
 }
 
 .popup-panel {
@@ -341,14 +419,32 @@ button:hover {
   background-color: #4338ca;
 }
 
+.active-button {
+  background-color: #4f46e5; /* Active color */
+  color: white;
+}
+
+.inactive-button {
+  background-color: #d1d5db; /* Greyed out for inactive */
+  color: #4b5563;
+}
+
+.table-switch-button {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
 .operations-diary-header {
   display: flex;
   align-items: center;
   justify-content: space-between; /* This ensures the title and button group are on opposite ends */
   padding: 8px 32px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin-top: 2%;
+  border: 2px solid #a0aec0;
+  border-radius: 6px;
+  margin-top: 1%;
 }
 
 .table-switch-buttons {

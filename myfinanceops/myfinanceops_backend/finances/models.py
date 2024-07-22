@@ -73,6 +73,12 @@ class Operation(models.Model):
     trader = models.CharField(max_length=255)
     description = models.TextField()
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE, related_name='operations')
+    TYPE_CHOICES = (
+        ('stock', 'Stock'),
+        ('futures', 'Futures'),
+        ('options', 'Options'),
+    )
+    type = models.CharField(max_length=50, choices=TYPE_CHOICES, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -91,6 +97,10 @@ class StockOperation(Operation):
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='stock_operation_chain')
 
+    def save(self, *args, **kwargs):
+        self.type = 'Stock'  # Set the type for StockOperation
+        super(StockOperation, self).save(*args, **kwargs)
+
 
 class FuturesOperation(Operation):
     contract = models.CharField(max_length=255)
@@ -101,6 +111,10 @@ class FuturesOperation(Operation):
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='futures_operation_chain')
 
+    def save(self, *args, **kwargs):
+        self.type = 'Futures'  # Set the type for FuturesOperation
+        super(FuturesOperation, self).save(*args, **kwargs)
+
 
 class FuturesOptionsOperation(Operation):
     strike_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -110,3 +124,7 @@ class FuturesOptionsOperation(Operation):
                                     related_name='modified_futures_options_operations')
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='futures_options_operation_chain')
+
+    def save(self, *args, **kwargs):
+        self.type = 'Options'  # Set the type for FuturesOptionsOperation
+        super(FuturesOptionsOperation, self).save(*args, **kwargs)
