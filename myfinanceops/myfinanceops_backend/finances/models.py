@@ -1,5 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import PermissionsMixin
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 import uuid
 from django.conf import settings
@@ -89,7 +91,9 @@ class Operation(models.Model):
 
 
 class StockOperation(Operation):
+    stock_code = models.CharField(max_length=255)
     shares_amount = models.PositiveIntegerField()
+    price_per_share = models.DecimalField(max_digits=10, decimal_places=2)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_stock_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -104,6 +108,7 @@ class StockOperation(Operation):
 
 class FuturesOperation(Operation):
     contract = models.CharField(max_length=255)
+    price_per_contract = models.DecimalField(max_digits=10, decimal_places=2)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_futures_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -118,6 +123,8 @@ class FuturesOperation(Operation):
 
 class FuturesOptionsOperation(Operation):
     strike_price = models.DecimalField(max_digits=10, decimal_places=2)
+    premium = models.DecimalField(max_digits=10, decimal_places=2)
+    price_per_contract = models.DecimalField(max_digits=10, decimal_places=2)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_futures_options_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -128,3 +135,27 @@ class FuturesOptionsOperation(Operation):
     def save(self, *args, **kwargs):
         self.type = 'Options'  # Set the type for FuturesOptionsOperation
         super(FuturesOptionsOperation, self).save(*args, **kwargs)
+
+
+class OperationsCommissions(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    operation = GenericForeignKey('content_type', 'object_id')
+    object_id = models.PositiveIntegerField()
+    commission = models.DecimalField(max_digits=10, decimal_places=4)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='created_operations_comissions')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                    related_name='modified_operations_comissions')
+
+
+class Contracts(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=255)
+    name_underlying = models.CharField(max_length=255)
+    contract = models.CharField(max_length=255)
+    expiry_date = models.DateField()
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='created_contracts')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                    related_name='modified_contracts')

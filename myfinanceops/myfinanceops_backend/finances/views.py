@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from .serializers import UserSerializer
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain
 from finances.serializers import StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer
 from django.shortcuts import get_object_or_404
@@ -79,27 +79,6 @@ class HomeView(APIView):
         return JsonResponse({'message': 'Welcome to the finance operations API!'})
 
 
-class CreateOperationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        data = json.loads(request.body)
-        operation_type = data.get('type')
-        common_fields = {key: data[key] for key in data if key not in ['type', 'specific_fields']}
-
-        if operation_type == 'stock':
-            operation = StockOperation(**common_fields, **data['specific_fields'])
-        elif operation_type == 'futures':
-            operation = FuturesOperation(**common_fields, **data['specific_fields'])
-        elif operation_type == 'futures_options':
-            operation = FuturesOptionsOperation(**common_fields, **data['specific_fields'])
-        else:
-            return JsonResponse({'error': 'Invalid operation type'}, status=400)
-
-        operation.save()
-        return JsonResponse({'message': 'Operation created successfully'}, status=201)
-
-
 class OperationsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -125,3 +104,36 @@ class OperationsView(APIView):
         # Return the combined data
         print(all_operations)
         return Response(all_operations)
+
+
+class CreateOperationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        data = json.loads(request.body)
+        operation_type = data.get('type')
+        operation_chain_id = data.get('operation_chain', None)
+        common_fields = {key: data[key] for key in data if key not in ['type', 'specific_fields', 'operation_chain']}
+        specific_fields = data.get('specific_fields', {})
+
+        # Handle operation_chain
+        if operation_chain_id:
+            operation_chain = OperationChain.objects.get(id=operation_chain_id)
+            common_fields['operation_chain'] = operation_chain
+        else:
+            # Create a new chain or handle according to your logic
+            operation_chain = OperationChain.objects.create()
+            common_fields['operation_chain'] = operation_chain
+
+        # Create operation based on type
+        if operation_type == 'stock':
+            operation = StockOperation(**common_fields, **specific_fields)
+        elif operation_type == 'futures':
+            operation = FuturesOperation(**common_fields, **specific_fields)
+        elif operation_type == 'futures_options':
+            operation = FuturesOptionsOperation(**common_fields, **specific_fields)
+        else:
+            return JsonResponse({'error': 'Invalid operation type'}, status=400)
+
+        operation.save()
+        return JsonResponse({'message': 'Operation created successfully'}, status=201)

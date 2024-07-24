@@ -1,6 +1,7 @@
 import {createRouter, createWebHistory} from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import LoginView from "../views/LoginView.vue";
+import HomeView from '@/views/HomeView.vue'
+import NotFoundView from "@/views/NotFoundView.vue";
+import LoginView from "@/views/LoginView.vue";
 import OperationsView from "@/views/OperationsView.vue";
 import HedgingView from "@/views/HedgingView.vue";
 import SignupVIew from '@/views/SignupVIew.vue';
@@ -48,6 +49,11 @@ const router = createRouter({
             path: '/logout',
             name: 'logout',
             component: () => import('../views/LogoutView.vue'),
+        },
+        {
+            path: '/:pathMatch(.*)*', // Catch-all
+            name: 'not-found',
+            component: NotFoundView,
         }
     ]
 })

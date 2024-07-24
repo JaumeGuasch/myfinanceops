@@ -38,6 +38,8 @@
                 </label>
               </div>
               <div class="flex justify-end">
+                <button @click="resetFilters" class="py-2 px-4 mt-2 mr-2"> Reset Filters
+                </button>
                 <button @click="showPopup = false" class="py-2 px-4 mt-2">
                   Close
                 </button>
@@ -54,37 +56,33 @@
       </div>
     </div>
     <!-- Separate div for the operations table -->
-    <div v-if="loading" class="text-center py-4">Loading...</div>
-    <div v-if="error" class="text-red-500">Failed to load operations: {{ error }}</div>
-    <transition name="fade" mode="out-in">
-      <table v-if="!loading && operations" class="table-auto divide-y divide-gray-200 mt-4 w-full">
-        <thead class="bg-gray-50">
-        <tr>
-          <template v-for="(columnDetail, columnName) in headers" :key="columnName">
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                v-if="columnDetail.visible">
-              {{ columnDetail.name }}
-            </th>
-          </template>
-        </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-        <tr v-for="operation in filteredOperations" :key="operation.id">
-          <template v-for="(columnDetail, columnName) in headers" :key="columnName">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnDetail.visible">
-              {{ operation[columnName as keyof Operation] }}
-            </td>
-          </template>
-        </tr>
-        </tbody>
-      </table>
-    </transition>
+    <table v-if="!loading && operations" class="table-auto divide-y divide-gray-200 mt-4 w-full">
+      <thead class="bg-gray-50">
+      <tr>
+        <template v-for="(columnDetail, columnName) in headers" :key="columnName">
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              v-if="columnDetail.visible">
+            {{ columnDetail.name }}
+          </th>
+        </template>
+      </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+      <tr v-for="operation in filteredOperations" :key="operation.id">
+        <template v-for="(columnDetail, columnName) in headers" :key="columnName">
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnDetail.visible">
+            {{ operation[columnName as keyof Operation] }}
+          </td>
+        </template>
+      </tr>
+      </tbody>
+    </table>
   </main>
 </template>
 
 
 <script setup lang="ts">
-import {onMounted, ref, watch, computed, toRaw, reactive} from 'vue';
+import {onMounted, ref, watch, computed, reactive} from 'vue';
 import {useOperationsStore} from "@/stores/operationsStore";
 
 interface Operation {
@@ -101,13 +99,8 @@ interface Operation {
   call_put: string;
 }
 
-// Load and parse operations from localStorage
-const loadOperations = () => {
-  const operationsJSON = localStorage.getItem('operations');
-  return operationsJSON ? JSON.parse(operationsJSON) : [];
-};
-const loading = ref(false);
-const error = ref(null);
+const operations = ref<Operation[]>([]);
+const loading = ref(true);
 const showPopup = ref(false);
 const operationsStore = useOperationsStore();
 const currentTableView = ref<TableView>('Stock'); // Default to 'Stocks'
@@ -178,16 +171,24 @@ const tableHeaders = reactive<Record<TableView, Record<string, ColumnDetail>>>({
   },
 });
 
-console.log('tableHeaders:', tableHeaders[currentTableView.value]);
-
 function setTableView(view: TableView) {
   currentTableView.value = view;
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadHeadersFromLocalStorage();
-  operationsStore.getOperations();
+  console.log("Loading operations...");
+  await operationsStore.getOperations(); // Fetch operations and store them in localStorage
+  operations.value = loadOperations(); // Directly set the operations ref with the loaded operations
+  console.log("Operations loaded!");
+  loading.value = false;
 });
+
+const loadOperations = () => {
+  const operationsJSON = localStorage.getItem('operations');
+  return operationsJSON ? JSON.parse(operationsJSON) : [];
+};
+
 
 function togglePopup() {
   showPopup.value = !showPopup.value;
@@ -201,21 +202,13 @@ watch(showPopup, (newValue) => {
 function toggleVisibility(columnName: string) {
   const savedHeaders = headers.value; // Current headers from the reactive state
   savedHeaders[columnName].visible = !savedHeaders[columnName].visible;
-
-  // Save the updated headers for the current view only
   localStorage.setItem(`${currentTableView.value}Headers`, JSON.stringify(savedHeaders));
 }
 
-const operations = ref<Operation[]>(loadOperations());
-
-
-// Step 1: Watch for changes in search terms
 watch(() => tableHeaders, (newVal, oldVal) => {
-  // Call a method to filter operations based on the new search terms
   filterOperationsBasedOnSearch();
 }, {deep: true});
 
-// Step 2: Implement the method to filter operations
 function filterOperationsBasedOnSearch() {
   const currentHeaders = tableHeaders[currentTableView.value];
   operations.value = loadOperations().filter((operation: Operation) => {
@@ -233,10 +226,21 @@ function filterOperationsBasedOnSearch() {
   });
 }
 
-// Computed property to filter operations based on the current table view
 const filteredOperations = computed(() => {
   return operations.value.filter(operation => operation.type.toLowerCase() === currentTableView.value.toLowerCase());
 });
+
+function resetFilters() {
+  const currentHeaders = tableHeaders[currentTableView.value];
+  Object.keys(currentHeaders).forEach(columnName => {
+    currentHeaders[columnName].visible = true; // Set all columns to be visible
+    currentHeaders[columnName].searchTerm = ''; // Clear the search term
+  });
+  // Save the updated headers to localStorage
+  localStorage.setItem(`${currentTableView.value}Headers`, JSON.stringify(currentHeaders));
+  // Trigger UI update if necessary
+  filterOperationsBasedOnSearch(); // Assuming this method updates the displayed operations based on filters
+}
 
 </script>
 
