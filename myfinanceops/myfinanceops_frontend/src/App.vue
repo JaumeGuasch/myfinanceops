@@ -73,7 +73,7 @@
       </div>
     </div>
   </nav>
-  <main class="px-8 py-6 bg-white ">
+  <main class="px-8 py-6 bg-white">
     <router-view v-slot="{ Component }">
       <transition name="slide-fade" mode="out-in">
         <component :is="Component" :key="$route.fullPath"/>

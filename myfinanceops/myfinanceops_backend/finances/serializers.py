@@ -13,6 +13,8 @@ class UserSerializer(serializers.ModelSerializer):
 
 class StockOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    created_by = UserSerializer(read_only=True)
+    modified_by = UserSerializer(read_only=True)
 
     class Meta:
         model = StockOperation
@@ -21,6 +23,8 @@ class StockOperationSerializer(serializers.ModelSerializer):
 
 class FuturesOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    created_by = UserSerializer(read_only=True)
+    modified_by = UserSerializer(read_only=True)
 
     class Meta:
         model = FuturesOperation
@@ -29,6 +33,8 @@ class FuturesOperationSerializer(serializers.ModelSerializer):
 
 class FuturesOptionsOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    created_by = UserSerializer(read_only=True)
+    modified_by = UserSerializer(read_only=True)
 
     class Meta:
         model = FuturesOptionsOperation

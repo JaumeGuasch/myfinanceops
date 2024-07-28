@@ -19,7 +19,6 @@
       <div class="flex items-center">
         <div :class="{ 'showPopup': showPopup }">
           <button @click="togglePopup" class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2">
-            <!-- filter icon -->
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-6">
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -47,7 +46,8 @@
             </div>
           </div>
         </div>
-        <button class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2">
+        <button class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2" title="Add operation"
+                @click="redirectToAddOperation">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                stroke="currentColor" class="size-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
@@ -71,7 +71,14 @@
       <tr v-for="operation in filteredOperations" :key="operation.id">
         <template v-for="(columnDetail, columnName) in headers" :key="columnName">
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnDetail.visible">
+        <span v-if="columnName === 'id'">
+          <a @click="goToOperationDetail(operation.id)" class="text-blue-500 cursor-pointer">
             {{ operation[columnName as keyof Operation] }}
+          </a>
+        </span>
+            <span v-else>
+          {{ operation[columnName as keyof Operation] }}
+        </span>
           </td>
         </template>
       </tr>
@@ -84,6 +91,8 @@
 <script setup lang="ts">
 import {onMounted, ref, watch, computed, reactive} from 'vue';
 import {useOperationsStore} from "@/stores/operationsStore";
+import {useRouter} from 'vue-router';
+
 
 interface Operation {
   id: number;
@@ -105,7 +114,7 @@ const showPopup = ref(false);
 const operationsStore = useOperationsStore();
 const currentTableView = ref<TableView>('Stock'); // Default to 'Stocks'
 const isActiveButton = computed(() => (view: string) => view === currentTableView.value);
-
+const router = useRouter();
 
 type TableView = 'Stock' | 'Futures' | 'Options';
 
@@ -145,10 +154,11 @@ const tableHeaders = reactive<Record<TableView, Record<string, ColumnDetail>>>({
   Stock: {
     id: {name: 'ID', visible: true, searchTerm: ''},
     type: {name: 'Type', visible: true, searchTerm: ''},
+    stock_code: {name: 'Stock', visible: true, searchTerm: ''},
     date: {name: 'Date', visible: true, searchTerm: ''},
     market_name: {name: 'Market', visible: true, searchTerm: ''},
     trader: {name: 'Trader', visible: true, searchTerm: ''},
-    shares: {name: 'Shares', visible: true, searchTerm: ''},
+    shares_amount: {name: 'Shares', visible: true, searchTerm: ''},
     description: {name: 'Description', visible: true, searchTerm: ''},
   },
   Futures: {
@@ -242,6 +252,14 @@ function resetFilters() {
   filterOperationsBasedOnSearch(); // Assuming this method updates the displayed operations based on filters
 }
 
+const redirectToAddOperation = () => {
+  router.push('/operations/new');
+};
+
+const goToOperationDetail = (operationId: number) => {
+  router.push(`/operations/${operationId}`);
+};
+
 </script>
 
 <style scoped>
@@ -256,11 +274,10 @@ function resetFilters() {
   text-transform: uppercase;
   font-weight: bolder;
   font-size: 24px;
-  color: #1f2937;
+  color: #374151; /* Slightly darker grey tone */
   text-align: center;
   padding: 8px;
-  background-color: #ffffff; /* Replace #f0f0f0 with your desired color */
-
+  background-color: #ffffff;
 }
 
 th, td {
@@ -327,7 +344,7 @@ tbody tr:nth-child(odd) {
 }
 
 tbody tr:nth-child(even) {
-  background-color: #ABBEFF; /* Light blue for even rows */
+  background-color: #d8e4f0; /* Light blue for even rows */
 }
 
 .popup-panel {

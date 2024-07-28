@@ -1,44 +1,136 @@
 <template>
   <div>
-    <h2>Operation Details</h2>
-    <form>
-      <div>
-        <label>Date:</label>
-        <input type="date" v-model="operation.date" disabled>
+    <div class="operations-diary-header">
+      <h1 class="header-style">Operation Details for ID: {{ operationId }}</h1>
+      <div class="table-switch-buttons">
+        <button @click="editOperation" class="button" title="Edit">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+          </svg>
+        </button>
+        <button @click="deleteOperation" class="button" title="Delete">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+          </svg>
+        </button>
       </div>
-      <div>
-        <label>Market:</label>
-        <input type="text" v-model="operation.market.name" disabled>
+    </div>
+    <div class="operation-details">
+      <div v-if="operationDetails">
+        <p>Type: {{ operationDetails.type }}</p>
+        <p>Date: {{ operationDetails.date }}</p>
+        <p>Market: {{ operationDetails.market_name }}</p>
+        <p>Contract: {{ operationDetails.contract }}</p>
+        <p>Price per Share: {{ operationDetails.price_per_share }}</p>
+        <p>Shares Amount: {{ operationDetails.shares_amount }}</p>
+        <p>Stock Code: {{ operationDetails.stock_code }}</p>
+        <p>Trader: {{ operationDetails.trader }}</p>
+        <p>Description: {{ operationDetails.description }}</p>
+        <p>Created By: {{ operationDetails.created_by.name }} {{ operationDetails.created_by.surnames }}</p>
+        <p>Modified By: {{ operationDetails.modified_by.name }} {{ operationDetails.modified_by.surnames }}</p>
+        <p>Operation Chain: {{ operationDetails.operation_chain }}</p>
       </div>
-      <div>
-        <label>Trader:</label>
-        <input type="text" v-model="operation.trader" disabled>
+      <div v-else>
+        <p>No details available for this operation.</p>
       </div>
-      <div>
-        <label>Description:</label>
-        <textarea v-model="operation.description" disabled></textarea>
-      </div>
-      <!-- Add more fields as necessary -->
-    </form>
+    </div>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      operation: {} // This will hold the operation details
-    };
-  },
-  mounted() {
-    this.fetchOperationDetails();
-  },
-  methods: {
-    fetchOperationDetails() {
-      const operationId = this.$route.params.id;
-      // Implement fetching logic here using operationId
-      // this.operation = fetchedOperationDetails;
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const operationId = route.params.operation_id;
+const operationDetails = ref<Record<string, any> | null>(null);
+
+onMounted(() => {
+  console.log(`Fetching details for operation ID: ${operationId}`);
+  const storedOperations = localStorage.getItem('operations');
+  if (storedOperations) {
+    const operationsList = JSON.parse(storedOperations);
+    const operation = operationsList.find((op: any) => op.id === operationId);
+    if (operation) {
+      console.log('Operation details found:', operation);
+      operationDetails.value = operation;
+    } else {
+      console.log('No operation details found for this ID.');
     }
+  } else {
+    console.log('No operations found in localStorage.');
   }
-}
+});
+
+const editOperation = () => {
+  // Implement edit operation logic
+};
+
+const deleteOperation = () => {
+  // Implement delete operation logic
+};
 </script>
+
+<style scoped>
+.operations-diary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 32px;
+  border: 2px solid #a0aec0;
+  border-radius: 6px;
+  margin-top: 1%;
+  transition: margin-right 0.3s ease;
+  margin-right: var(-30%, 0%);
+  background-color: #ffffff;
+}
+
+.header-style {
+  text-transform: uppercase;
+  font-weight: bolder;
+  font-size: 24px;
+  color: #374151; /* Slightly darker grey tone */
+  text-align: center;
+  padding: 8px;
+  background-color: #ffffff;
+}
+
+.table-switch-buttons {
+  display: flex;
+  gap: 20px;
+}
+
+.button {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button:hover {
+  background-color: #4338ca;
+}
+
+.button svg.size-6 {
+  width: 24px;
+  height: 24px;
+}
+
+.operation-details {
+  padding: 16px;
+  border: 1px solid #a0aec0; /* Updated border color to match the header */
+  border-radius: 8px;
+  margin-top: 16px;
+  background-color: #f9fafb;
+}
+
+.operation-details p {
+  margin: 8px 0;
+}
+</style>

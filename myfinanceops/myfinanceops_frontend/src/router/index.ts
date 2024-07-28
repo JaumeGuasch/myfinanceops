@@ -54,7 +54,19 @@ const router = createRouter({
             path: '/:pathMatch(.*)*', // Catch-all
             name: 'not-found',
             component: NotFoundView,
-        }
+        },
+        {
+            path: '/operations/:operation_id',
+            name: 'operation-detail',
+            component: () => import('../views/OperationsDetailComponent.vue'),
+            meta: {requiresAuth: true}
+        },
+        {
+            path: '/operations/new',
+            name: 'new-operation',
+            component: () => import('../views/CreateOperationView.vue'),
+            meta: {requiresAuth: true}
+        },
     ]
 })
 

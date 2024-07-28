@@ -1,15 +1,15 @@
 import json
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import UserSerializer
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, Operation, Market
 from finances.serializers import StockOperationSerializer, \
-    FuturesOperationSerializer, FuturesOptionsOperationSerializer
+    FuturesOperationSerializer, FuturesOptionsOperationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
@@ -112,28 +112,111 @@ class CreateOperationView(APIView):
     def post(self, request, *args, **kwargs):
         data = json.loads(request.body)
         operation_type = data.get('type')
-        operation_chain_id = data.get('operation_chain', None)
+        operation_chain_number = data.get('operation_chain', None)
         common_fields = {key: data[key] for key in data if key not in ['type', 'specific_fields', 'operation_chain']}
         specific_fields = data.get('specific_fields', {})
 
         # Handle operation_chain
-        if operation_chain_id:
-            operation_chain = OperationChain.objects.get(id=operation_chain_id)
+        if operation_chain_number:
+            operation_chain = OperationChain.objects.get(chain_number=operation_chain_number)
             common_fields['operation_chain'] = operation_chain
         else:
-            # Create a new chain or handle according to your logic
+            # Create a new chain
             operation_chain = OperationChain.objects.create()
             common_fields['operation_chain'] = operation_chain
 
+        # Fetch the Market instance
+        market_name = common_fields.pop('market', None)
+        if market_name:
+            market = Market.objects.get(name=market_name)
+            common_fields['market'] = market
+
+        # Set the created_by and modified_by fields to the current user
+        common_fields['created_by'] = request.user
+        common_fields['modified_by'] = request.user
+
         # Create operation based on type
-        if operation_type == 'stock':
+        if operation_type == 'stockoperation':
             operation = StockOperation(**common_fields, **specific_fields)
-        elif operation_type == 'futures':
+        elif operation_type == 'futuresoperation':
             operation = FuturesOperation(**common_fields, **specific_fields)
-        elif operation_type == 'futures_options':
+        elif operation_type == 'futuresoptionsoperation':
             operation = FuturesOptionsOperation(**common_fields, **specific_fields)
         else:
             return JsonResponse({'error': 'Invalid operation type'}, status=400)
 
         operation.save()
-        return JsonResponse({'message': 'Operation created successfully'}, status=201)
+        return JsonResponse({
+            'message': 'Operation created successfully',
+            'operation_chain': operation_chain.chain_number
+        }, status=201)
+
+
+class OperationTypesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Define a dictionary mapping model names to labels
+        model_labels = {
+            'stockoperation': 'Stocks operation',
+            'futuresoperation': 'Futures operation',
+            'futuresoptionsoperation': 'Options operation'
+        }
+
+        # Get all models that are subclasses of Operation
+        operation_models = [model for model in apps.get_models() if
+                            issubclass(model, Operation) and model is not Operation]
+
+        # Extract the names and labels of these models
+        operation_types = [{'type': model._meta.model_name,
+                            'label': model_labels.get(model._meta.model_name, model._meta.verbose_name)} for model in
+                           operation_models]
+
+        return JsonResponse({'operation_types': operation_types})
+
+
+def get_operation_fields(request):
+    operation_type = request.GET.get('type')
+    allowed_types = ['stockoperation', 'futuresoperation', 'futuresoptionsoperation']
+
+    if not operation_type or operation_type not in allowed_types:
+        return JsonResponse({'error': 'Valid operation type is required'}, status=400)
+
+    # Common fields for all operations
+    common_fields = [
+        {'name': 'date', 'label': 'Date', 'type': 'date'},
+        {'name': 'trader', 'label': 'Trader', 'type': 'text'},
+        {'name': 'market', 'label': 'Market', 'type': 'text'},
+        {'name': 'transaction_type', 'label': 'Transaction Type', 'type': 'select', 'options': ['buy', 'sell']},
+    ]
+
+    # Specific fields based on operation type
+    if operation_type == 'stockoperation':
+        specific_fields = [
+            {'name': 'stock_code', 'label': 'Stock Code', 'type': 'text'},
+            {'name': 'shares_amount', 'label': 'Shares Amount', 'type': 'number'},
+            {'name': 'price_per_share', 'label': 'Price per Share', 'type': 'number'},
+        ]
+    elif operation_type == 'futuresoperation':
+        specific_fields = [
+            {'name': 'contract', 'label': 'Contract', 'type': 'text'},
+            {'name': 'price_per_contract', 'label': 'Price per Contract', 'type': 'number'},
+        ]
+    elif operation_type == 'futuresoptionsoperation':
+        specific_fields = [
+            {'name': 'strike_price', 'label': 'Strike Price', 'type': 'number'},
+            {'name': 'premium', 'label': 'Premium', 'type': 'number'},
+            {'name': 'price_per_contract', 'label': 'Price per Contract', 'type': 'number'},
+        ]
+    else:
+        specific_fields = []
+
+    # Combine common fields with specific fields
+    fields = common_fields + specific_fields
+
+    return JsonResponse(fields, safe=False)
+
+
+def get_all_operation_chain(request):
+    operation_chains = OperationChain.objects.all().values('id', 'chain_number')
+    return JsonResponse(list(operation_chains), safe=False)
