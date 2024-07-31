@@ -1,11 +1,14 @@
 from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import PermissionsMixin
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 import uuid
 from django.conf import settings
 from django.db.models import Max
+from django.db import transaction, IntegrityError
+from django.utils import timezone
+from multiselectfield import MultiSelectField
 
 
 # Create your models here.
@@ -54,11 +57,38 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Market(models.Model):
     name = models.CharField(max_length=255)
+    mic = models.CharField(max_length=4)  # Market Identifier Code
+    DAY_CHOICES = (
+        ('MON', 'Monday'),
+        ('TUE', 'Tuesday'),
+        ('WED', 'Wednesday'),
+        ('THU', 'Thursday'),
+        ('FRI', 'Friday'),
+        ('SAT', 'Saturday'),
+        ('SUN', 'Sunday'),
+    )
+    trading_days = MultiSelectField(choices=DAY_CHOICES, max_length=255, null=True, blank=True)
     currency = models.CharField(max_length=3)  # ISO currency code
+    notes = models.TextField(blank=True)
 
 
-from django.db import transaction, IntegrityError
-from django.utils import timezone
+class OperationCommission(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    operation = GenericForeignKey('content_type', 'object_id')
+    commission = models.ForeignKey('Commissions', on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=4)  # Amount charged
+
+    class Meta:
+        unique_together = ('content_type', 'object_id', 'commission')
+
+
+class Commissions(models.Model):
+    name = models.CharField(max_length=255)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                   related_name='created_operations_comissions')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                    related_name='modified_operations_comissions')
 
 
 class OperationChain(models.Model):
@@ -80,8 +110,8 @@ class OperationChain(models.Model):
                     with transaction.atomic():
                         current_year = timezone.now().year
                         max_chain_number = \
-                        OperationChain.objects.filter(chain_number__startswith=str(current_year)).aggregate(
-                            Max('chain_number'))['chain_number__max']
+                            OperationChain.objects.filter(chain_number__startswith=str(current_year)).aggregate(
+                                Max('chain_number'))['chain_number__max']
                         if max_chain_number:
                             next_number = int(max_chain_number[-6:]) + 1
                         else:
@@ -134,6 +164,7 @@ class StockOperation(Operation):
                                     related_name='modified_stock_operations')
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='stock_operation_chain')
+    commissions = GenericRelation(OperationCommission, related_query_name='stock_operations')
 
     def save(self, *args, **kwargs):
         self.type = 'Stock'  # Set the type for StockOperation
@@ -152,6 +183,7 @@ class FuturesOperation(Operation):
                                     related_name='modified_futures_operations')
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='futures_operation_chain')
+    commissions = GenericRelation(OperationCommission, related_query_name='futures_operations')
 
     def save(self, *args, **kwargs):
         self.type = 'Futures'  # Set the type for FuturesOperation
@@ -171,6 +203,7 @@ class FuturesOptionsOperation(Operation):
                                     related_name='modified_futures_options_operations')
     operation_chain = models.ForeignKey('OperationChain', on_delete=models.CASCADE,
                                         related_name='futures_options_operation_chain')
+    commissions = GenericRelation(OperationCommission, related_query_name='futures_options_operations')
 
     def save(self, *args, **kwargs):
         self.type = 'Options'  # Set the type for FuturesOptionsOperation
@@ -178,18 +211,6 @@ class FuturesOptionsOperation(Operation):
 
     class Meta:
         verbose_name = "Options operation"
-
-
-class OperationsCommissions(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    operation = GenericForeignKey('content_type', 'object_id')
-    object_id = models.PositiveIntegerField()
-    commission = models.DecimalField(max_digits=10, decimal_places=4)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                   related_name='created_operations_comissions')
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                    related_name='modified_operations_comissions')
 
 
 class Contracts(models.Model):

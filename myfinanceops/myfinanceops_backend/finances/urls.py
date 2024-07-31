@@ -13,4 +13,6 @@ urlpatterns = [
     path('operation-types', OperationTypesView.as_view(), name='operation-types'),
     path('operation-fields/', get_operation_fields, name='operation-fields'),
     path('get-all-operation-chain', views.get_all_operation_chain),
+    path('get-markets', views.get_markets),
+    path('get-commissions', views.get_commissions),
 ]

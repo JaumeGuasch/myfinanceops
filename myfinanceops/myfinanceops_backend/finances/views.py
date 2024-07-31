@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, Operation, Market
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, Operation, \
+    Market, OperationCommission, Commissions
 from finances.serializers import StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
@@ -220,3 +221,14 @@ def get_operation_fields(request):
 def get_all_operation_chain(request):
     operation_chains = OperationChain.objects.all().values('id', 'chain_number')
     return JsonResponse(list(operation_chains), safe=False)
+
+
+def get_markets(request):
+    markets = Market.objects.all().values()
+    return JsonResponse(list(markets), safe=False)
+
+
+def get_commissions(request):
+    commissions = OperationsCommissions.objects.all().values('id', 'content_type', 'object_id', 'commission',
+                                                             'created_by', 'modified_by')
+    return JsonResponse(list(commissions), safe=False)

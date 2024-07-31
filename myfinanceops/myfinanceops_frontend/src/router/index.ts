@@ -67,6 +67,12 @@ const router = createRouter({
             component: () => import('../views/CreateOperationView.vue'),
             meta: {requiresAuth: true}
         },
+        {
+            path: '/operations/settings',
+            name: 'operations-settings',
+            component: () => import('../views/OperationsSettingsView.vue'),
+            meta: {requiresAuth: true}
+        },
     ]
 })
 
