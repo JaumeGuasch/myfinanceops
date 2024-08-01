@@ -85,10 +85,8 @@ class OperationCommission(models.Model):
 
 class Commissions(models.Model):
     name = models.CharField(max_length=255)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                   related_name='created_operations_comissions')
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                    related_name='modified_operations_comissions')
+    created_by = models.ForeignKey(User, related_name='created_commissions', on_delete=models.CASCADE)
+    modified_by = models.ForeignKey(User, related_name='modified_commissions', on_delete=models.CASCADE)
 
 
 class OperationChain(models.Model):

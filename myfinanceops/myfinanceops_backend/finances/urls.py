@@ -14,5 +14,9 @@ urlpatterns = [
     path('operation-fields/', get_operation_fields, name='operation-fields'),
     path('get-all-operation-chain', views.get_all_operation_chain),
     path('get-markets', views.get_markets),
+    path('create-market', views.create_market),
+    path('delete-market', views.delete_market),
     path('get-commissions', views.get_commissions),
+    path('create-commission', views.create_commission),
+    path('delete-commission', views.delete_commission),
 ]

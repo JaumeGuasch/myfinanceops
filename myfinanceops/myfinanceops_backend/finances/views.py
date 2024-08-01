@@ -228,7 +228,102 @@ def get_markets(request):
     return JsonResponse(list(markets), safe=False)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_market(request):
+    try:
+        data = json.loads(request.body)
+        name = data.get('name')
+        mic = data.get('mic')
+        trading_days = data.get('trading_days', [])
+        currency = data.get('currency')
+        notes = data.get('notes', '')
+
+        if not name or not mic or not currency:
+            return JsonResponse({'error': 'Name, MIC, and currency are required'}, status=400)
+
+        market = Market.objects.create(
+            name=name,
+            mic=mic,
+            trading_days=trading_days,
+            currency=currency,
+            notes=notes
+        )
+        return JsonResponse({
+            'message': 'Market created successfully',
+            'market': {
+                'id': market.id,
+                'name': market.name,
+                'mic': market.mic,
+                'trading_days': market.trading_days,
+                'currency': market.currency,
+                'notes': market.notes
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def delete_market(request):
+    try:
+        data = json.loads(request.body)
+        market_ids = data.get('ids', [])
+        if not market_ids:
+            return JsonResponse({'error': 'Market IDs are required'}, status=400)
+
+        Market.objects.filter(id__in=market_ids).delete()
+        return JsonResponse({'message': 'Markets deleted successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_commissions(request):
-    commissions = OperationsCommissions.objects.all().values('id', 'content_type', 'object_id', 'commission',
-                                                             'created_by', 'modified_by')
+    commissions = Commissions.objects.all().values('id', 'name', 'created_by', 'modified_by')
     return JsonResponse(list(commissions), safe=False)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_commission(request):
+    try:
+        data = json.loads(request.body)
+        name = data.get('name')
+
+        if not name:
+            return JsonResponse({'error': 'Name is required'}, status=400)
+
+        commission = Commissions.objects.create(
+            name=name,
+            created_by=request.user,
+            modified_by=request.user
+        )
+        return JsonResponse({
+            'message': 'Commission created successfully',
+            'commission': {
+                'id': commission.id,
+                'name': commission.name,
+                'created_by': commission.created_by.id,
+                'modified_by': commission.modified_by.id
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def delete_commission(request):
+    try:
+        data = json.loads(request.body)
+        commission_ids = data.get('ids', [])
+        if not commission_ids:
+            return JsonResponse({'error': 'Commission IDs are required'}, status=400)
+
+        Commissions.objects.filter(id__in=commission_ids).delete()
+        return JsonResponse({'message': 'Commissions deleted successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
