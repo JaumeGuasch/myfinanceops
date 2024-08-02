@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, Operation, \
-    Market, OperationCommission, Commissions
+    Market, Commissions
 from finances.serializers import StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
@@ -117,22 +117,23 @@ class CreateOperationView(APIView):
         common_fields = {key: data[key] for key in data if key not in ['type', 'specific_fields', 'operation_chain']}
         specific_fields = data.get('specific_fields', {})
 
-        # Handle operation_chain
         if operation_chain_number:
             operation_chain = OperationChain.objects.get(chain_number=operation_chain_number)
+            existing_operations = Operation.objects.filter(operation_chain=operation_chain)
+            if existing_operations.exists():
+                existing_type = existing_operations.first()._meta.model_name
+                if existing_type != operation_type:
+                    return JsonResponse({'error': 'Operation type mismatch in the chain'}, status=400)
             common_fields['operation_chain'] = operation_chain
         else:
-            # Create a new chain
             operation_chain = OperationChain.objects.create()
             common_fields['operation_chain'] = operation_chain
 
-        # Fetch the Market instance
         market_name = common_fields.pop('market', None)
         if market_name:
             market = Market.objects.get(name=market_name)
             common_fields['market'] = market
 
-        # Set the created_by and modified_by fields to the current user
         common_fields['created_by'] = request.user
         common_fields['modified_by'] = request.user
 
@@ -151,6 +152,55 @@ class CreateOperationView(APIView):
             'message': 'Operation created successfully',
             'operation_chain': operation_chain.chain_number
         }, status=201)
+
+
+class UpdateOperationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            operation_id = data.get('id')
+            if not operation_id:
+                return JsonResponse({'error': 'Operation ID is required'}, status=400)
+
+            # Retrieve the StockOperation instance
+            operation = StockOperation.objects.get(id=operation_id)
+
+            # Update fields
+            operation.date = data.get('date', operation.date)
+            operation.trader = data.get('trader', operation.trader)
+            operation.transaction_type = data.get('transaction_type', operation.transaction_type)
+            operation.stock_code = data.get('stock_code', operation.stock_code)
+            operation.shares_amount = data.get('shares_amount', operation.shares_amount)
+            operation.price_per_share = data.get('price_per_share', operation.price_per_share)
+            operation.description = data.get('description', operation.description)
+
+            # Convert operation_chain to OperationChain instance
+            operation_chain_id = data.get('operation_chain')
+            if operation_chain_id:
+                operation_chain = OperationChain.objects.get(id=operation_chain_id)
+                operation.operation_chain = operation_chain
+
+            # Convert market to Market instance
+            market_id = data.get('market')
+            if market_id:
+                market = Market.objects.get(id=market_id)
+                operation.market = market
+
+            # Save the updated operation
+            operation.save()
+
+            return JsonResponse({'message': 'Operation updated successfully'}, status=200)
+
+        except StockOperation.DoesNotExist:
+            return JsonResponse({'error': 'Operation not found'}, status=404)
+        except OperationChain.DoesNotExist:
+            return JsonResponse({'error': 'Operation chain not found'}, status=404)
+        except Market.DoesNotExist:
+            return JsonResponse({'error': 'Market not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
 class OperationTypesView(APIView):
@@ -219,7 +269,25 @@ def get_operation_fields(request):
 
 
 def get_all_operation_chain(request):
-    operation_chains = OperationChain.objects.all().values('id', 'chain_number')
+    operation_type = request.GET.get('type')
+    if operation_type:
+        if operation_type == 'stockoperation':
+            operation_chains = OperationChain.objects.filter(
+                stock_operation_chain__isnull=False
+            ).distinct().values('id', 'chain_number')
+        elif operation_type == 'futuresoperation':
+            operation_chains = OperationChain.objects.filter(
+                futures_operation_chain__isnull=False
+            ).distinct().values('id', 'chain_number')
+        elif operation_type == 'futuresoptionsoperation':
+            operation_chains = OperationChain.objects.filter(
+                futures_options_operation_chain__isnull=False
+            ).distinct().values('id', 'chain_number')
+        else:
+            return JsonResponse({'error': 'Invalid operation type'}, status=400)
+    else:
+        operation_chains = OperationChain.objects.all().values('id', 'chain_number')
+
     return JsonResponse(list(operation_chains), safe=False)
 
 

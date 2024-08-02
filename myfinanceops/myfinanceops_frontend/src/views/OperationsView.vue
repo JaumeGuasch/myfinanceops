@@ -203,9 +203,9 @@ onMounted(async () => {
 
 const loadOperations = () => {
   const operationsJSON = localStorage.getItem('operations');
-  return operationsJSON ? JSON.parse(operationsJSON) : [];
+  const operations = operationsJSON ? JSON.parse(operationsJSON) : [];
+  return operations.sort((a: Operation, b: Operation) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
-
 
 function togglePopup() {
   showPopup.value = !showPopup.value;

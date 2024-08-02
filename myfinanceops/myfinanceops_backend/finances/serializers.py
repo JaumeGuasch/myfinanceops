@@ -1,7 +1,5 @@
 from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, Market
 from rest_framework import serializers
-
-from rest_framework import serializers
 from .models import User
 
 
@@ -13,6 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class StockOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    chain_number = serializers.CharField(source='operation_chain.chain_number', read_only=True)
     created_by = UserSerializer(read_only=True)
     modified_by = UserSerializer(read_only=True)
 
@@ -23,6 +22,7 @@ class StockOperationSerializer(serializers.ModelSerializer):
 
 class FuturesOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    chain_number = serializers.CharField(source='operation_chain.chain_number', read_only=True)
     created_by = UserSerializer(read_only=True)
     modified_by = UserSerializer(read_only=True)
 
@@ -33,6 +33,7 @@ class FuturesOperationSerializer(serializers.ModelSerializer):
 
 class FuturesOptionsOperationSerializer(serializers.ModelSerializer):
     market_name = serializers.StringRelatedField(source='market.name', read_only=True)
+    chain_number = serializers.CharField(source='operation_chain.chain_number', read_only=True)
     created_by = UserSerializer(read_only=True)
     modified_by = UserSerializer(read_only=True)
 
@@ -43,6 +44,7 @@ class FuturesOptionsOperationSerializer(serializers.ModelSerializer):
 
 class MarketSerializer(serializers.ModelSerializer):
     market_name = serializers.CharField(source='market.name', read_only=True)
+    chain_number = serializers.StringRelatedField(source='chain.number', read_only=True)
 
     class Meta:
         model = Market

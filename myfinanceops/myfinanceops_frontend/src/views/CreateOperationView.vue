@@ -101,7 +101,7 @@ const fetchOperationTypes = async () => {
 
 const fetchSpecificFields = async (type: string) => {
   try {
-    const url = `api/operation-fields/?type=${type}`;
+    const url = `api/operation-fields?type=${type}`;
     const response = await api.get(url);
     const data = response.data;
     specificFields.value = Array.isArray(data) ? data.filter(field => !commonFieldNames.includes(field.name)) : [];
@@ -112,14 +112,21 @@ const fetchSpecificFields = async (type: string) => {
   }
 };
 
-const fetchOperationChains = async () => {
+const fetchOperationChains = async (type: string) => {
   try {
-    const response = await api.get('api/get-all-operation-chain');
+    const response = await api.get(`api/get-all-operation-chain?type=${type}`);
     operationChains.value = response.data;
   } catch (error) {
     console.error('Error fetching operation chains:', error);
   }
-};
+}
+
+watch(selectedType, (newType) => {
+  if (newType.type) {
+    fetchSpecificFields(newType.type);
+    fetchOperationChains(newType.type);
+  }
+});
 
 const commonFieldNames = ['date', 'trader', 'market'];
 
@@ -148,7 +155,6 @@ const handleSubmit = async () => {
       specific_fields: {}
     };
 
-    // Conditionally add specific fields based on the selected operation type
     if (selectedType.value.type === 'stockoperation') {
       payload.specific_fields = {
         stock_code: formData.value.stock_code,
@@ -168,7 +174,7 @@ const handleSubmit = async () => {
       };
     }
 
-    console.log('Payload:', JSON.stringify(payload, null, 2)); // Log the payload for debugging
+    console.log('Payload:', JSON.stringify(payload, null, 2));
 
     const response = await api.post('api/create-operation', payload, {
       headers: {
@@ -185,7 +191,6 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   fetchOperationTypes();
-  fetchOperationChains();
 });
 
 watch(selectedType, (newType) => {

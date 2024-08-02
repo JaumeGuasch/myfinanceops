@@ -1,11 +1,12 @@
+// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
-import NotFoundView from "@/views/NotFoundView.vue";
-import LoginView from "@/views/LoginView.vue";
-import OperationsView from "@/views/OperationsView.vue";
-import HedgingView from "@/views/HedgingView.vue";
+import NotFoundView from '@/views/NotFoundView.vue';
+import LoginView from '@/views/LoginView.vue';
+import OperationsView from '@/views/OperationsView.vue';
+import HedgingView from '@/views/HedgingView.vue';
 import SignupView from '@/views/SignupView.vue';
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from '@/stores/auth';
 
 export const routes = [
   { path: '/home/', name: 'home', component: HomeView, meta: { requiresAuth: true } },

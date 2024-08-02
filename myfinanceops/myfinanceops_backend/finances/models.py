@@ -154,8 +154,8 @@ class Operation(models.Model):
 
 class StockOperation(Operation):
     stock_code = models.CharField(max_length=255)
-    shares_amount = models.PositiveIntegerField()
-    price_per_share = models.DecimalField(max_digits=10, decimal_places=2)
+    shares_amount = models.IntegerField(null=False, blank=False)
+    price_per_share = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_stock_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
