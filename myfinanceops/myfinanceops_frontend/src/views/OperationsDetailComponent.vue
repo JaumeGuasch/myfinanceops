@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="operations-diary">
     <div class="operations-diary-header">
       <h1 class="header-style">Operation Details for ID: {{ operationId }}</h1>
       <div class="table-switch-buttons">
@@ -10,7 +10,7 @@
                   d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
           </svg>
         </button>
-        <button @click="deleteOperation" class="button" title="Delete">
+        <button @click="() => deleteOperation(operationId)" class="button" title="Delete">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                stroke="currentColor" class="size-6">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -21,20 +21,56 @@
     </div>
     <div class="operation-details">
       <div v-if="operationDetails">
-        <p>Type: <input v-model="operationDetails.type" disabled/></p>
-        <p>Date: <input v-model="operationDetails.date" type="date"/></p>
-        <p>Market: <input v-model="operationDetails.market_name"/></p>
-        <p>Trader: <input v-model="operationDetails.trader"/></p>
-        <p>Description: <input v-model="operationDetails.description"/></p>
-        <p>Created By: {{ operationDetails.created_by.name }} {{ operationDetails.created_by.surnames }}</p>
-        <p>Modified By: {{ operationDetails.modified_by.name }} {{ operationDetails.modified_by.surnames }}</p>
-        <p>Operation Chain: <input v-model="operationDetails.chain_number"/></p>
-        <div v-for="field in specificFields" :key="field.name">
-          <p>{{ field.label }}: <input v-model="operationDetails[field.name]" :type="field.type" /></p>
+        <div class="common-fields">
+          <h3 class="section-title">Common fields</h3>
+          <div class="field">
+            <label for="operation_chain">Operation Chain:</label>
+            <select id="operation_chain" v-model="operationDetails.operation_chain" class="custom-input"
+                    :disabled="!isEditable">
+              <option value="" selected>Link to new chain of operations</option>
+              <option v-for="chain in operationChains" :key="chain.id" :value="chain.chain_number">{{
+                  chain.chain_number
+                }}
+              </option>
+            </select>
+          </div>
+          <div class="fields-grid">
+            <div v-for="field in commonFields" :key="field.name" class="field">
+              <label :for="field.name">{{ field.label }}:</label>
+              <input
+                  v-if="['text', 'number', 'date', 'email', 'password', 'tel', 'url', 'datetime-local', 'month', 'week', 'time', 'color'].includes(field.type)"
+                  :id="field.name" v-model="operationDetails[field.name]" :type="field.type" class="custom-input"
+                  :disabled="!isEditable"/>
+              <select v-if="field.type === 'select'" :id="field.name" v-model="operationDetails[field.name]"
+                      class="custom-input" :disabled="!isEditable">
+                <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
+              </select>
+              <textarea v-if="field.type === 'textarea'" :id="field.name" v-model="operationDetails[field.name]"
+                        class="custom-input" :disabled="!isEditable"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="specific-fields">
+          <h3 class="section-title">Specific fields</h3>
+          <div class="fields-grid">
+            <div v-for="field in specificFields" :key="field.name" class="field">
+              <label :for="field.name">{{ field.label }}:</label>
+              <input v-if="field.type === 'text'" :id="field.name" v-model="operationDetails[field.name]"
+                     :type="field.type" class="custom-input" :disabled="!isEditable"/>
+              <input v-if="field.type === 'number'" :id="field.name" v-model="operationDetails[field.name]"
+                     :type="field.type" class="custom-input" :disabled="!isEditable"/>
+              <input v-if="field.type === 'date'" :id="field.name" v-model="operationDetails[field.name]"
+                     :type="field.type" class="custom-input" :disabled="!isEditable"/>
+              <select v-if="field.type === 'select'" :id="field.name" v-model="operationDetails[field.name]"
+                      class="custom-input" :disabled="!isEditable">
+                <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="form-buttons">
-          <button @click="confirmChanges" class="button">Confirm Changes</button>
-          <button @click="cancelChanges" class="button">Cancel</button>
+          <button @click="confirmChanges" class="button" :disabled="!isEditable">Confirm Changes</button>
+          <button @click="cancelChanges" class="button" :disabled="!isEditable">Cancel</button>
         </div>
       </div>
       <div v-else>
@@ -44,10 +80,10 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+<script setup lang="ts">import {ref, onMounted} from 'vue';
+import {useRoute} from 'vue-router';
 import api from "@/main";
+import router from "@/router";
 
 interface SpecificField {
   name: string;
@@ -57,10 +93,16 @@ interface SpecificField {
 }
 
 const route = useRoute();
-const operationId = route.params.operation_id;
+let operationId = route.params.operation_id;
+if (Array.isArray(operationId)) {
+  operationId = operationId[0];
+}
 const operationDetails = ref<Record<string, any> | null>(null);
 const originalDetails = ref<Record<string, any> | null>(null);
 const specificFields = ref<SpecificField[]>([]);
+const commonFields = ref<SpecificField[]>([]);
+const isEditable = ref(false);
+const operationChains = ref<any[]>([]);
 
 const fetchSpecificFields = async (type: string) => {
   try {
@@ -81,15 +123,23 @@ const fetchSpecificFields = async (type: string) => {
 
     const url = `api/operation-fields?type=${apiType}`;
     const response = await api.get(url);
-
-    // Define common fields to exclude
-    const commonFields = ['date', 'trader', 'market', 'description', 'operation_chain'];
-
-    // Filter out common fields
-    specificFields.value = response.data.filter((field: SpecificField) => !commonFields.includes(field.name));
+    const commonFieldNames = ['date', 'trader', 'market', 'description', 'operation_chain'];
+    specificFields.value = response.data.filter((field: SpecificField) => !commonFieldNames.includes(field.name));
+    commonFields.value = response.data.filter((field: SpecificField) => commonFieldNames.includes(field.name));
     console.log('Specific fields fetched:', specificFields.value);
+    console.log('Common fields fetched:', commonFields.value);
   } catch (error) {
     console.error('Error fetching specific fields:', error);
+  }
+};
+
+const fetchOperationChains = async () => {
+  try {
+    const response = await api.get('/api/get-all-operation-chain');
+    operationChains.value = response.data;
+    console.log('Operation chains fetched:', operationChains.value);
+  } catch (error) {
+    console.error('Error fetching operation chains:', error);
   }
 };
 
@@ -101,8 +151,8 @@ onMounted(() => {
     const operation = operationsList.find((op: any) => op.id === operationId);
     if (operation) {
       console.log('Operation details found:', operation);
-      operationDetails.value = { ...operation };
-      originalDetails.value = { ...operation };
+      operationDetails.value = {...operation};
+      originalDetails.value = {...operation};
       fetchSpecificFields(operation.type);
     } else {
       console.log('No operation details found for this ID.');
@@ -110,6 +160,19 @@ onMounted(() => {
   } else {
     console.log('No operations found in localStorage.');
   }
+  fetchOperationChains().then(() => {
+    if (operationDetails.value && operationDetails.value.operation_chain) {
+      const existingChain = operationChains.value.find(chain => chain.id === operationDetails.value!.operation_chain);
+      if (existingChain) {
+        operationDetails.value.operation_chain = existingChain.chain_number;
+      } else {
+        operationChains.value.push({
+          id: operationDetails.value.operation_chain,
+          chain_number: operationDetails.value.operation_chain
+        });
+      }
+    }
+  });
 });
 
 const confirmChanges = async () => {
@@ -117,6 +180,14 @@ const confirmChanges = async () => {
     const plainObject = JSON.parse(JSON.stringify(operationDetails.value));
     delete plainObject.created_by;
     delete plainObject.modified_by;
+
+    // Ensure the operation_chain is correctly set before updating
+    const existingChain = operationChains.value.find(chain => chain.chain_number === plainObject.operation_chain);
+    if (existingChain) {
+      plainObject.operation_chain = existingChain.id;
+    } else {
+      plainObject.operation_chain = operationDetails.value!.operation_chain;
+    }
 
     console.log('Request body:', plainObject);
 
@@ -137,12 +208,39 @@ const confirmChanges = async () => {
   }
 };
 
-const cancelChanges = () => {
-  operationDetails.value = { ...originalDetails.value };
+const deleteOperation = async (id: string) => {
+  try {
+    const response = await api.delete('/api/delete-operation', {
+      data: {id}
+    });
+    if (response.status === 200) {
+      console.log('Operation deleted successfully');
+      await router.push('/operations');
+    } else {
+      console.error('Failed to delete operation:', response.data.error);
+    }
+  } catch (error) {
+    console.error('Error deleting operation:', error);
+  }
 };
+
+const cancelChanges = () => {
+  operationDetails.value = {...originalDetails.value};
+  isEditable.value = false;
+};
+
+const editOperation = () => {
+  isEditable.value = true;
+};
+
+defineExpose({
+  deleteOperation,
+});
 </script>
 
-<style scoped>
+<style src="@/assets/button-styles.css"></style>
+
+<style>
 .operations-diary-header {
   display: flex;
   align-items: center;
@@ -152,7 +250,6 @@ const cancelChanges = () => {
   border-radius: 6px;
   margin-top: 1%;
   transition: margin-right 0.3s ease;
-  margin-right: var(-30%, 0%);
   background-color: #ffffff;
 }
 
@@ -171,28 +268,6 @@ const cancelChanges = () => {
   gap: 20px;
 }
 
-.button {
-  background-color: #4f46e5;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.button:hover {
-  background-color: #4338ca;
-}
-
-.button svg.size-6 {
-  width: 24px;
-  height: 24px;
-}
-
 .operation-details {
   padding: 16px;
   border: 1px solid #a0aec0;
@@ -205,9 +280,55 @@ const cancelChanges = () => {
   margin: 8px 0;
 }
 
+.common-fields, .specific-fields {
+  padding: 16px;
+  border: 1px solid #a0aec0;
+  border-radius: 8px;
+  margin-top: 16px;
+  background-color: #ffffff;
+}
+
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #a0aec0;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.section-title {
+  padding: 12px 0;
+  font-size: 18px;
+  font-weight: 500;
+  border-bottom: 2px solid #a0aec0;
+  margin-bottom: 16px;
+}
+
+.custom-input {
+  width: 100%;
+  height: 50%;
+  padding: 8px;
+}
+
 .form-buttons {
   display: flex;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 16px;
   margin-top: 16px;
 }
 </style>

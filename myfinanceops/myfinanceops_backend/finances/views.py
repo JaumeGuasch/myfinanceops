@@ -1,19 +1,21 @@
 import json
+
 from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, Operation, \
-    Market, Commissions
+from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, \
+    Market, Operation, Commissions, OperationCommission
 from finances.serializers import StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import authentication_classes, permission_classes
-from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 
@@ -22,14 +24,12 @@ from rest_framework.permissions import IsAuthenticated
 @api_view(['POST'])
 def login(request):
     try:
-        print(request.data)
         email = request.data.get('email')
         password = request.data.get('password')
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = get_object_or_404(get_user_model(), email=email)
-        print(user.email)
         if user.check_password(password):
             token, created = Token.objects.get_or_create(user=user)
             serializer = UserSerializer(user)
@@ -55,10 +55,8 @@ def signup(request):
 
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def test_token(request):
-    print(request.data)
     return Response({"message": "Token is valid for {}".format(request.user.email)})
 
 
@@ -85,25 +83,16 @@ class OperationsView(APIView):
 
     def get(self, request, *args, **kwargs):
         all_operations = []
-        print(request.user)
-
         subclass_serializer_mapping = {
             StockOperation: StockOperationSerializer,
             FuturesOperation: FuturesOperationSerializer,
             FuturesOptionsOperation: FuturesOptionsOperationSerializer,
         }
 
-        # Iterate over each subclass and its serializer
         for subclass, serializer_class in subclass_serializer_mapping.items():
-            # Query all instances of the subclass
             subclass_instances = subclass.objects.all()
-            # Serialize the data
             serializer = serializer_class(subclass_instances, many=True)
-            # Add the serialized data to the list of all operations
             all_operations.extend(serializer.data)
-
-        # Return the combined data
-        print(all_operations)
         return Response(all_operations)
 
 
@@ -119,7 +108,15 @@ class CreateOperationView(APIView):
 
         if operation_chain_number:
             operation_chain = OperationChain.objects.get(chain_number=operation_chain_number)
-            existing_operations = Operation.objects.filter(operation_chain=operation_chain)
+            if operation_type == 'stockoperation':
+                existing_operations = StockOperation.objects.filter(operation_chain=operation_chain)
+            elif operation_type == 'futuresoperation':
+                existing_operations = FuturesOperation.objects.filter(operation_chain=operation_chain)
+            elif operation_type == 'futuresoptionsoperation':
+                existing_operations = FuturesOptionsOperation.objects.filter(operation_chain=operation_chain)
+            else:
+                return JsonResponse({'error': 'Invalid operation type'}, status=400)
+
             if existing_operations.exists():
                 existing_type = existing_operations.first()._meta.model_name
                 if existing_type != operation_type:
@@ -226,6 +223,28 @@ class OperationTypesView(APIView):
         return JsonResponse({'operation_types': operation_types})
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@require_http_methods(["DELETE"])
+def delete_operation(request):
+    try:
+        data = json.loads(request.body)
+        operation_id = data.get('id')
+        if not operation_id:
+            return JsonResponse({'error': 'Operation ID is required'}, status=400)
+
+        # Retrieve the StockOperation instance
+        operation = StockOperation.objects.get(id=operation_id)
+        operation.delete()
+
+        return JsonResponse({'message': 'Operation deleted successfully'}, status=200)
+
+    except StockOperation.DoesNotExist:
+        return JsonResponse({'error': 'Operation not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def get_operation_fields(request):
     operation_type = request.GET.get('type')
     allowed_types = ['stockoperation', 'futuresoperation', 'futuresoptionsoperation']
@@ -233,15 +252,13 @@ def get_operation_fields(request):
     if not operation_type or operation_type not in allowed_types:
         return JsonResponse({'error': 'Valid operation type is required'}, status=400)
 
-    # Common fields for all operations
     common_fields = [
         {'name': 'date', 'label': 'Date', 'type': 'date'},
         {'name': 'trader', 'label': 'Trader', 'type': 'text'},
         {'name': 'market', 'label': 'Market', 'type': 'text'},
-        {'name': 'transaction_type', 'label': 'Transaction Type', 'type': 'select', 'options': ['buy', 'sell']},
+        {'name': 'transaction_type', 'label': 'Transaction Type', 'type': 'select', 'options': ['Buy', 'Sell']},
     ]
 
-    # Specific fields based on operation type
     if operation_type == 'stockoperation':
         specific_fields = [
             {'name': 'stock_code', 'label': 'Stock Code', 'type': 'text'},
@@ -395,3 +412,47 @@ def delete_commission(request):
         return JsonResponse({'message': 'Commissions deleted successfully'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@api_view(["POST"])
+def add_commission(request):
+    try:
+        data = json.loads(request.body)
+        operation_id = data.get('operation_id')
+        commission_id = data.get('commission_id')
+        amount = data.get('amount')
+        currency = data.get('currency')
+        operation = Operation.objects.get(id=operation_id)
+        commission = Commissions.objects.get(id=commission_id)
+
+        OperationCommission.objects.create(
+            content_type=ContentType.objects.get_for_model(operation),
+            object_id=operation.id,
+            commission=commission,
+            amount=amount,
+            currency=currency
+        )
+
+        return JsonResponse({'message': 'Commission added successfully'}, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(["DELETE"])
+def delete_commission(request):
+    try:
+        data = json.loads(request.body)
+        operation_id = data.get('operation_id')
+        commission_id = data.get('commission_id')
+        operation = Operation.objects.get(id=operation_id)
+        commission = Commissions.objects.get(id=commission_id)
+
+        OperationCommission.objects.filter(
+            content_type=ContentType.objects.get_for_model(operation),
+            object_id=operation.id,
+            commission=commission
+        ).delete()
+
+        return JsonResponse({'message': 'Commission deleted successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

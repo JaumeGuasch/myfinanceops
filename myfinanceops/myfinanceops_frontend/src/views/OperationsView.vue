@@ -273,23 +273,10 @@ const goToOperationDetail = (operationId: number) => {
 
 </script>
 
+<style src="@/assets/button-styles.css"></style>
+<style src="@/assets/page-header.css"></style>
+
 <style scoped>
-
-.operations-diary-header {
-  transition: margin-right 0.3s ease;
-  margin-right: var(-30%, 0%);
-  background-color: #ffffff; /* Replace #f0f0f0 with your desired color */
-}
-
-.header-style {
-  text-transform: uppercase;
-  font-weight: bolder;
-  font-size: 24px;
-  color: #374151; /* Slightly darker grey tone */
-  text-align: center;
-  padding: 8px;
-  background-color: #ffffff;
-}
 
 th, td {
   border: 2px solid #ddd;
@@ -363,11 +350,6 @@ tbody tr:nth-child(even) {
   padding: 20px;
   border-radius: 8px;
 
-}
-
-.operations-diary-header, .table-wrapper {
-  z-index: 1;
-  position: relative;
 }
 
 .popup-container {
@@ -467,16 +449,6 @@ button:hover {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-}
-
-.operations-diary-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* This ensures the title and button group are on opposite ends */
-  padding: 8px 32px;
-  border: 2px solid #a0aec0;
-  border-radius: 6px;
-  margin-top: 1%;
 }
 
 .table-switch-buttons {

@@ -77,6 +77,7 @@ class OperationCommission(models.Model):
     object_id = models.UUIDField()
     operation = GenericForeignKey('content_type', 'object_id')
     commission = models.ForeignKey('Commissions', on_delete=models.CASCADE)
+    currency = models.CharField(max_length=3)  # ISO currency code
     amount = models.DecimalField(max_digits=10, decimal_places=4)  # Amount charged
 
     class Meta:
@@ -137,12 +138,8 @@ class Operation(models.Model):
         ('futures', 'Futures'),
         ('options', 'Options'),
     )
-    TRANSACTION_CHOICES = (
-        ('buy', 'Buy'),
-        ('sell', 'Sell'),
-    )
     type = models.CharField(max_length=50, choices=TYPE_CHOICES, editable=False)
-    transaction_type = models.CharField(max_length=4, choices=TRANSACTION_CHOICES)
+    transaction_type = models.CharField(max_length=4)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name='created_operations')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,

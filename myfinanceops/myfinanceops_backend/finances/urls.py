@@ -1,7 +1,7 @@
 from django.urls import path, re_path
 from finances import views
 from finances.views import CreateOperationView, OperationsView, HomeView, OperationTypesView, get_operation_fields, \
-    UpdateOperationView
+    UpdateOperationView, add_commission, delete_commission
 
 urlpatterns = [
     re_path('login', views.login),
@@ -11,6 +11,7 @@ urlpatterns = [
     path('home', HomeView.as_view(), name='home'),
     path('create-operation', CreateOperationView.as_view(), name='create_operation'),
     path('update-operation', UpdateOperationView.as_view(), name='update_operation'),
+    path('delete-operation/', views.delete_operation, name='delete_operation'),
     path('operations', OperationsView.as_view(), name='operations_list'),
     path('operation-types', OperationTypesView.as_view(), name='operation-types'),
     path('operation-fields/', get_operation_fields, name='operation-fields'),
@@ -21,4 +22,6 @@ urlpatterns = [
     path('get-commissions', views.get_commissions),
     path('create-commission', views.create_commission),
     path('delete-commission', views.delete_commission),
+    path('add-commission-to-operation/', add_commission, name='add_commission'),
+    path('delete-commission-from-operation/', delete_commission, name='delete_commission'),
 ]

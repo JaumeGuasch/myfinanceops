@@ -1,0 +1,26 @@
+.operations-diary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 32px;
+    border: 2px solid #a0aec0;
+    border-radius: 6px;
+    margin-top: 0.5%;
+    margin-bottom: 0.5%;
+}
+
+.operations-diary-header {
+    transition: margin-right 0.3s ease;
+    margin-right: var(-30%, 0%);
+    background-color: #ffffff;
+}
+
+.header-style {
+    text-transform: uppercase;
+    font-weight: bolder;
+    font-size: 24px;
+    color: #374151;
+    text-align: center;
+    padding: 8px;
+    background-color: #ffffff;
+}
