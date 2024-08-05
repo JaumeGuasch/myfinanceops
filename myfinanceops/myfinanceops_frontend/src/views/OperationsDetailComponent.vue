@@ -10,7 +10,7 @@
                   d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
           </svg>
         </button>
-        <button @click="() => deleteOperation(operationId)" class="button" title="Delete">
+        <button @click="deleteOperationHandler" class="button" title="Delete">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                stroke="currentColor" class="size-6">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -208,10 +208,11 @@ const confirmChanges = async () => {
   }
 };
 
-const deleteOperation = async (id: string) => {
+const deleteOperation = async (id: string, type: string) => {
   try {
+    console.log(`Deleting operation with ID: ${id} and type: ${type}`);
     const response = await api.delete('/api/delete-operation', {
-      data: {id}
+      data: {id, type}
     });
     if (response.status === 200) {
       console.log('Operation deleted successfully');
@@ -221,6 +222,20 @@ const deleteOperation = async (id: string) => {
     }
   } catch (error) {
     console.error('Error deleting operation:', error);
+  }
+};
+
+const deleteOperationHandler = () => {
+  if (operationDetails.value) {
+    const typeMapping: Record<string, string> = {
+      'Stock': 'stockoperation',
+      'Futures': 'futuresoperation',
+      'Options': 'futuresoptionsoperation'
+    };
+    const backendType = typeMapping[operationDetails.value.type];
+    deleteOperation(operationId, backendType);
+  } else {
+    console.error('Operation details are not available.');
   }
 };
 

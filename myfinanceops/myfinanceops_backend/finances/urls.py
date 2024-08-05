@@ -1,7 +1,8 @@
 from django.urls import path, re_path
 from finances import views
 from finances.views import CreateOperationView, OperationsView, HomeView, OperationTypesView, get_operation_fields, \
-    UpdateOperationView, add_commission, delete_commission
+    UpdateOperationView, add_commission, delete_commission, country_choices, create_trading_company, \
+    delete_trading_company
 
 urlpatterns = [
     re_path('login', views.login),
@@ -22,6 +23,15 @@ urlpatterns = [
     path('get-commissions', views.get_commissions),
     path('create-commission', views.create_commission),
     path('delete-commission', views.delete_commission),
-    path('add-commission-to-operation/', add_commission, name='add_commission'),
-    path('delete-commission-from-operation/', delete_commission, name='delete_commission'),
+    path('add-commission-to-operation/', views.add_commission, name='add_commission'),
+    path('delete-commission-from-operation/', views.delete_commission, name='delete_commission'),
+    path('country-choices/', views.country_choices, name='country-choices'),
+    path('get-trading-companies', views.get_trading_companies),
+    path('create-trading-company', create_trading_company, name='create_trading_company'),
+    path('delete-trading-company', delete_trading_company, name='delete_trading_company'),
+    path('get-trading-accounts', views.get_trading_accounts, name='get_trading_accounts'),
+    path('add-trading-account', views.create_trading_account, name='add_trading_account'),
+    path('delete-trading-account', views.delete_trading_account, name='delete_trading_account'),
+    path('currency-choices', views.get_currency_choices, name='currency_choices'),
+
 ]

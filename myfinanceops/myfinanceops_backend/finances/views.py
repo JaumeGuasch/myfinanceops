@@ -5,13 +5,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django_countries import countries
+from djmoney.settings import CURRENCY_CHOICES
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from finances.models import StockOperation, FuturesOperation, FuturesOptionsOperation, OperationChain, \
-    Market, Operation, Commissions, OperationCommission
+    Market, Operation, Commissions, OperationCommission, TradingCompany, TradingAccount
 from finances.serializers import StockOperationSerializer, \
     FuturesOperationSerializer, FuturesOptionsOperationSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
@@ -225,16 +227,28 @@ class OperationTypesView(APIView):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-@require_http_methods(["DELETE"])
 def delete_operation(request):
     try:
         data = json.loads(request.body)
         operation_id = data.get('id')
-        if not operation_id:
-            return JsonResponse({'error': 'Operation ID is required'}, status=400)
+        operation_type = data.get('type')
 
-        # Retrieve the StockOperation instance
-        operation = StockOperation.objects.get(id=operation_id)
+        if not operation_id or not operation_type:
+            return JsonResponse({'error': 'Operation ID and type are required'}, status=400)
+
+        # Mapping of operation types to their respective models
+        operation_model_mapping = {
+            'stockoperation': StockOperation,
+            'futuresoperation': FuturesOperation,
+            'futuresoptionsoperation': FuturesOptionsOperation,
+        }
+
+        operation_model = operation_model_mapping.get(operation_type.lower())
+        if not operation_model:
+            return JsonResponse({'error': 'Invalid operation type'}, status=400)
+
+        # Retrieve and delete the operation
+        operation = operation_model.objects.get(id=operation_id)
         operation.delete()
 
         return JsonResponse({'message': 'Operation deleted successfully'}, status=200)
@@ -456,3 +470,111 @@ def delete_commission(request):
         return JsonResponse({'message': 'Commission deleted successfully'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+
+def country_choices(request):
+    choices = [{'code': code, 'name': name} for code, name in countries]
+    return JsonResponse(choices, safe=False)
+
+
+def get_trading_companies(request):
+    trading_companies = TradingCompany.objects.all().values('id', 'name', 'country')
+    return JsonResponse(list(trading_companies), safe=False)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_trading_company(request):
+    try:
+        data = json.loads(request.body)
+        trading_company = TradingCompany.objects.create(
+            name=data['name'],
+            country=data['country']
+        )
+        return JsonResponse({
+            'tradingCompany': {
+                'id': trading_company.id,
+                'name': trading_company.name,
+                'country': trading_company.country.code  # Serialize country as code
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_trading_company(request):
+    try:
+        data = json.loads(request.body)
+        TradingCompany.objects.filter(name__in=data['names']).delete()
+        return JsonResponse({'status': 'success'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_trading_account(request):
+    try:
+        data = json.loads(request.body)
+        if not data.get('trading_company_id') or not data.get('account_number') or not data.get('currency'):
+            return JsonResponse({'error': 'All fields are required'}, status=400)
+
+        trading_account = TradingAccount.objects.create(
+            trading_company_id=data['trading_company_id'],
+            account_number=data['account_number'],
+            currency=data['currency']
+        )
+        return JsonResponse({
+            'tradingAccount': {
+                'id': trading_account.id,
+                'trading_company': trading_account.trading_company.name,
+                'account_number': trading_account.account_number,
+                'currency': trading_account.currency
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_trading_account(request):
+    try:
+        data = json.loads(request.body)
+        trading_account_ids = data.get('ids')
+        if not trading_account_ids:
+            return JsonResponse({'error': 'Trading account IDs are required'}, status=400)
+
+        TradingAccount.objects.filter(id__in=trading_account_ids).delete()
+
+        return JsonResponse({'message': 'Trading accounts deleted successfully'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trading_accounts(request):
+    try:
+        trading_accounts = TradingAccount.objects.all()
+        trading_accounts_data = [
+            {
+                'id': account.id,
+                'trading_company': account.trading_company.name,
+                'account_number': account.account_number,
+                'currency': account.currency
+            }
+            for account in trading_accounts
+        ]
+        return JsonResponse(trading_accounts_data, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_currency_choices(request):
+    currencies = [{'code': code, 'name': name} for code, name in CURRENCY_CHOICES]
+    return JsonResponse(currencies, safe=False)

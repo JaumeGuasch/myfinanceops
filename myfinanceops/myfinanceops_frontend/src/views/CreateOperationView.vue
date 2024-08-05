@@ -323,12 +323,13 @@ const handleSubmit = async () => {
       };
     }
 
-    showPopup.value = true;
+    const response = await api.post('/api/create-operation', payload);
+    console.log('Server Response:', response.data);
 
+    showPopup.value = true;
     setTimeout(() => {
       window.location.href = '/operations/';
     }, 1000);
-
   } catch (error) {
     console.error('Error creating operation:', error);
   }
@@ -344,6 +345,7 @@ watch(selectedType, (newType) => {
     fetchSpecificFields(newType.type);
   }
 });
+
 </script>
 
 <style src="@/assets/button-styles.css"></style>

@@ -9,6 +9,8 @@ from django.db.models import Max
 from django.db import transaction, IntegrityError
 from django.utils import timezone
 from multiselectfield import MultiSelectField
+from django_countries.fields import CountryField
+from djmoney.settings import CURRENCY_CHOICES
 
 
 # Create your models here.
@@ -68,7 +70,7 @@ class Market(models.Model):
         ('SUN', 'Sunday'),
     )
     trading_days = MultiSelectField(choices=DAY_CHOICES, max_length=255, null=True, blank=True)
-    currency = models.CharField(max_length=3)  # ISO currency code
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES)
     notes = models.TextField(blank=True)
 
 
@@ -77,7 +79,7 @@ class OperationCommission(models.Model):
     object_id = models.UUIDField()
     operation = GenericForeignKey('content_type', 'object_id')
     commission = models.ForeignKey('Commissions', on_delete=models.CASCADE)
-    currency = models.CharField(max_length=3)  # ISO currency code
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=4)  # Amount charged
 
     class Meta:
@@ -218,3 +220,15 @@ class Contracts(models.Model):
                                    related_name='created_contracts')
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                     related_name='modified_contracts')
+
+
+class TradingCompany(models.Model):
+    name = models.CharField(max_length=255)
+    country = CountryField()
+
+
+
+class TradingAccount(models.Model):
+    trading_company = models.ForeignKey('TradingCompany', on_delete=models.CASCADE)
+    account_number = models.CharField(max_length=255)
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES)

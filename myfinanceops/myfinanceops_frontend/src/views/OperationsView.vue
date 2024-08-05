@@ -17,6 +17,13 @@
         </button>
       </div>
       <div class="flex items-center">
+        <button @click="downloadCSV" class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2" title="Download CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+            <path fill-rule="evenodd"
+                  d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"
+                  clip-rule="evenodd"/>
+          </svg>
+        </button>
         <div :class="{ 'showPopup': showPopup }">
           <button @click="togglePopup" class="py-2 px-4 bg-purple-600 text-white rounded-lg ml-2">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -77,15 +84,15 @@
       <tbody class="bg-white divide-y divide-gray-200">
       <tr v-for="operation in filteredOperations" :key="operation.id">
         <template v-for="(columnDetail, columnName) in headers" :key="columnName">
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" v-if="columnDetail.visible">
-        <span v-if="columnName === 'id'">
-          <a @click="goToOperationDetail(operation.id)" class="text-blue-500 cursor-pointer">
-            {{ operation[columnName as keyof Operation] }}
-          </a>
-        </span>
+          <td :class="['px-6 py-4 whitespace-nowrap text-sm', columnDetail.visible ? (isNumberColumn(columnName) ? 'text-right' : 'text-left') : '']">
+            <span v-if="columnName === 'id'">
+              <a @click="goToOperationDetail(operation.id)" class="text-blue-500 cursor-pointer">
+                {{ operation[columnName as keyof Operation] }}
+              </a>
+            </span>
             <span v-else>
-          {{ operation[columnName as keyof Operation] }}
-        </span>
+              {{ operation[columnName as keyof Operation] }}
+            </span>
           </td>
         </template>
       </tr>
@@ -111,6 +118,7 @@ interface Operation {
   shares: number;
   contract: string;
   price: number;
+  price_per_contract: number;
   strike_price: number;
   call_put: string;
 }
@@ -160,21 +168,20 @@ const headers = computed(() => {
 const tableHeaders = reactive<Record<TableView, Record<string, ColumnDetail>>>({
   Stock: {
     id: {name: 'ID', visible: true, searchTerm: ''},
-    type: {name: 'Type', visible: true, searchTerm: ''},
-    stock_code: {name: 'Stock', visible: true, searchTerm: ''},
+    stock_code: {name: 'Stock Code', visible: true, searchTerm: ''},
     date: {name: 'Date', visible: true, searchTerm: ''},
-    market_name: {name: 'Market', visible: true, searchTerm: ''},
+    market_name: {name: 'Market Name', visible: true, searchTerm: ''},
     trader: {name: 'Trader', visible: true, searchTerm: ''},
-    shares_amount: {name: 'Shares', visible: true, searchTerm: ''},
+    shares_amount: {name: 'Shares Amount', visible: true, searchTerm: ''},
+    price_per_share: {name: 'Price', visible: true, searchTerm: ''},
     description: {name: 'Description', visible: true, searchTerm: ''},
   },
   Futures: {
     id: {name: 'ID', visible: true, searchTerm: ''},
-    type: {name: 'Type', visible: true, searchTerm: ''},
     date: {name: 'Date', visible: true, searchTerm: ''},
     market_name: {name: 'Market', visible: true, searchTerm: ''},
     contract: {name: 'Contract', visible: true, searchTerm: ''},
-    price: {name: 'Price', visible: true, searchTerm: ''},
+    price_per_contract: {name: 'Price per Contract', visible: true, searchTerm: ''},
     description: {name: 'Description', visible: true, searchTerm: ''},
   },
   Options: {
@@ -184,7 +191,7 @@ const tableHeaders = reactive<Record<TableView, Record<string, ColumnDetail>>>({
     market_name: {name: 'Market', visible: true, searchTerm: ''},
     contract: {name: 'Contract', visible: true, searchTerm: ''},
     strike_price: {name: 'Strike Price', visible: true, searchTerm: ''},
-    call_put: {name: 'Call/Put', visible: true, searchTerm: ''},
+    description: {name: 'Description', visible: true, searchTerm: ''},
   },
 });
 
@@ -220,6 +227,34 @@ function toggleVisibility(columnName: string) {
   const savedHeaders = headers.value; // Current headers from the reactive state
   savedHeaders[columnName].visible = !savedHeaders[columnName].visible;
   localStorage.setItem(`${currentTableView.value}Headers`, JSON.stringify(savedHeaders));
+}
+
+function jsonToCSV(headers: string[], jsonData: Operation[]): string {
+  const csvRows = [headers.join(',')];
+
+  for (const row of jsonData) {
+    const values = headers.map(header => {
+      const escaped = ('' + row[header as keyof Operation]).replace(/"/g, '\\"');
+      return `"${escaped}"`;
+    });
+    csvRows.push(values.join(','));
+  }
+
+  return csvRows.join('\n');
+}
+
+function downloadCSV() {
+  const currentHeaders = Object.keys(headers.value).filter(key => headers.value[key].visible);
+  const csvData = jsonToCSV(currentHeaders, filteredOperations.value);
+  const blob = new Blob([csvData], {type: 'text/csv'});
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `${currentTableView.value.toLowerCase()}_operations.csv`);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 watch(() => tableHeaders, (newVal, oldVal) => {
@@ -259,6 +294,11 @@ function resetFilters() {
   filterOperationsBasedOnSearch(); // Assuming this method updates the displayed operations based on filters
 }
 
+function isNumberColumn(columnName: string): boolean {
+  const numberColumns = ['shares_amount', 'price_per_share', 'price_per_contract', 'strike_price'];
+  return numberColumns.includes(columnName);
+}
+
 const redirectToAddOperation = () => {
   router.push('/operations/new');
 };
@@ -273,10 +313,18 @@ const goToOperationDetail = (operationId: number) => {
 
 </script>
 
+
 <style src="@/assets/button-styles.css"></style>
 <style src="@/assets/page-header.css"></style>
-
 <style scoped>
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
 
 th, td {
   border: 2px solid #ddd;

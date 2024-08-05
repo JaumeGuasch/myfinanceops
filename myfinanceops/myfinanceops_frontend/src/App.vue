@@ -1,7 +1,6 @@
 <template>
   <div id="app">
-
-    <nav class="nav py-6 px-8 border-b border-gray-200">
+    <nav class="nav py-4 px-6 border-b border-gray-200">
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between">
           <div class="menu-left">
@@ -29,7 +28,6 @@
                 </svg>
                 <span>Hedging</span>
               </router-link>
-
               <router-link to="/operations/" class="flex flex-col items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                      stroke="currentColor" class="size-8">
